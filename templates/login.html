@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - BYOD Attendance Platform{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto my-8 bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl backdrop-blur relative overflow-hidden">
+    <!-- Ambient glow decoration -->
+    <div class="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="text-center mb-6">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-500/30">
+            <i class="fa-solid fa-shield-halved text-white text-2xl"></i>
+        </div>
+        <h2 class="text-2xl font-black text-white tracking-tight">Institutional Portal</h2>
+        <p class="text-xs text-slate-400 mt-1">Multi-Role Access for Management, Teachers, Students & Parents</p>
+    </div>
+
+    {% if error %}
+    <div class="mb-5 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2.5">
+        <i class="fa-solid fa-triangle-exclamation text-sm"></i>
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/login" class="space-y-4">
+        <div>
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Username / Roll No</label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <i class="fa-solid fa-id-card text-xs"></i>
+                </span>
+                <input type="text" id="usernameInput" name="username" required placeholder="Enter username"
+                    class="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Password</label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <i class="fa-solid fa-key text-xs"></i>
+                </span>
+                <input type="password" id="passwordInput" name="password" required placeholder="••••••••"
+                    class="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+            </div>
+        </div>
+
+        <button type="submit"
+            class="w-full py-3 px-4 mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition text-sm flex items-center justify-center gap-2">
+            <span>Authenticate Session</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+    </form>
+
+    <!-- Quick Role Fill Demo Buttons -->
+    <div class="mt-6 pt-5 border-t border-slate-800/80">
+        <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 text-center mb-2.5">
+            Quick One-Click Demo Role Accounts
+        </span>
+        <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="fillCreds('admin', 'admin123')"
+                class="p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-purple-500/50 text-left transition group">
+                <div class="text-[11px] font-bold text-purple-400 flex items-center justify-between">
+                    <span>Management</span>
+                    <i class="fa-solid fa-bolt text-[9px] opacity-0 group-hover:opacity-100 transition"></i>
+                </div>
+                <div class="text-[10px] text-slate-500 font-mono">admin / admin123</div>
+            </button>
+
+            <button type="button" onclick="fillCreds('teacher1', 'teacher123')"
+                class="p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-amber-500/50 text-left transition group">
+                <div class="text-[11px] font-bold text-amber-400 flex items-center justify-between">
+                    <span>Teacher</span>
+                    <i class="fa-solid fa-bolt text-[9px] opacity-0 group-hover:opacity-100 transition"></i>
+                </div>
+                <div class="text-[10px] text-slate-500 font-mono">teacher1 / teacher123</div>
+            </button>
+
+            <button type="button" onclick="fillCreds('student1', 'student123')"
+                class="p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-cyan-500/50 text-left transition group">
+                <div class="text-[11px] font-bold text-cyan-400 flex items-center justify-between">
+                    <span>Student (BYOD)</span>
+                    <i class="fa-solid fa-bolt text-[9px] opacity-0 group-hover:opacity-100 transition"></i>
+                </div>
+                <div class="text-[10px] text-slate-500 font-mono">student1 / student123</div>
+            </button>
+
+            <button type="button" onclick="fillCreds('parent1', 'parent123')"
+                class="p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-emerald-500/50 text-left transition group">
+                <div class="text-[11px] font-bold text-emerald-400 flex items-center justify-between">
+                    <span>Parent</span>
+                    <i class="fa-solid fa-bolt text-[9px] opacity-0 group-hover:opacity-100 transition"></i>
+                </div>
+                <div class="text-[10px] text-slate-500 font-mono">parent1 / parent123</div>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function fillCreds(u, p) {
+        document.getElementById('usernameInput').value = u;
+        document.getElementById('passwordInput').value = p;
+    }
+</script>
+{% endblock %}

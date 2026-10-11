@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}User Profile - BYOD Attendance Platform{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto my-6 bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl backdrop-blur">
+    <div class="flex items-center gap-4 pb-6 border-b border-slate-800 mb-6">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center text-2xl font-bold shadow-lg shadow-indigo-500/25">
+            {{ user.name[0] if user.name else "U" }}
+        </div>
+        <div>
+            <h2 class="text-xl font-bold text-white">{{ user.name }}</h2>
+            <div class="flex items-center gap-2 mt-0.5">
+                <span class="text-xs text-slate-400 font-mono">@{{ user.username }}</span>
+                {% if user.reg_no %}
+                <span class="text-xs text-cyan-400 font-mono font-bold">({{ user.reg_no }})</span>
+                {% endif %}
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    {{ user.role }}
+                </span>
+            </div>
+            {% if user.role == 'student' %}
+            <div class="text-xs text-slate-400 mt-1">
+                {{ user.class_name }} &bull; {{ user.year }} &bull; {{ user.department }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if success_msg %}
+    <div class="mb-5 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2.5">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>{{ success_msg }}</span>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/profile" class="space-y-4">
+        <div>
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Full Name</label>
+            <input type="text" name="name" value="{{ user.name }}" required
+                class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+
+        <div>
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Mobile Phone Number</label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <i class="fa-solid fa-phone text-xs"></i>
+                </span>
+                <input type="text" name="phone" value="{{ user.phone or '' }}" placeholder="+91-9876543210" required
+                    class="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">Used for attendance SMS alerts and login credentials delivery.</p>
+        </div>
+
+        {% if user.role == 'student' %}
+        <div>
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Parent Mobile Number</label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <i class="fa-solid fa-user-shield text-xs"></i>
+                </span>
+                <input type="text" name="parent_phone" value="{{ user.parent_phone or '' }}" placeholder="+91-9876543299"
+                    class="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">Intimations for 5 consecutive absences and monthly attendance reports are dispatched here.</p>
+        </div>
+        {% endif %}
+
+        <div>
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Email Address</label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <i class="fa-solid fa-envelope text-xs"></i>
+                </span>
+                <input type="email" name="email" value="{{ user.email or '' }}" placeholder="user@institution.edu"
+                    class="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+        </div>
+
+        <div class="pt-2 border-t border-slate-800">
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Change Password (Leave blank to keep current)</label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <i class="fa-solid fa-lock text-xs"></i>
+                </span>
+                <input type="password" name="password" placeholder="New password (min 4 characters)"
+                    class="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+        </div>
+
+        <div class="pt-4 flex justify-end gap-3">
+            <a href="/{{ user.role }}" class="px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white transition">
+                Cancel
+            </a>
+            <button type="submit"
+                class="px-6 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 transition flex items-center gap-2">
+                <i class="fa-solid fa-floppy-disk"></i>
+                <span>Save Profile Changes</span>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

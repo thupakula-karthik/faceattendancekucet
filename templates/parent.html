@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Parent Monitoring - 5-Day Alerts & Monthly Reports{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-5xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+        <div>
+            <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 mb-1">
+                <i class="fa-solid fa-people-roof text-[10px]"></i> Parent Guardian Oversight
+            </div>
+            <h1 class="text-2xl font-black text-white tracking-tight">Ward Biometric Attendance & Monthly Reports</h1>
+            <p class="text-xs text-slate-400">Welcome, {{ user.name }}. Guardian Mobile: <span class="font-mono text-emerald-400 font-semibold">{{ user.phone or 'Not set' }}</span></p>
+        </div>
+        <div>
+            <button onclick="requestMonthlySms()"
+                class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30 transition flex items-center gap-2">
+                <i class="fa-solid fa-comment-sms"></i>
+                <span>Send Monthly Report to Mobile</span>
+            </button>
+        </div>
+    </div>
+
+    {% if student %}
+        <!-- 1. CRITICAL: 5-Day Consecutive Absence Alert Banner -->
+        {% if consecutive_5day_alert %}
+        <div class="p-5 rounded-3xl bg-rose-500/20 border-2 border-rose-500 text-rose-100 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-pulse">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-2xl shrink-0 shadow-lg">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-black text-white uppercase tracking-wider">Critical: 5-Day Consecutive Absence Alert</h3>
+                    <p class="text-xs text-rose-200 mt-0.5">
+                        Your ward <strong class="text-white underline">{{ student.name }}</strong> (Reg: {{ student.reg_no }}) has been continuously absent for 
+                        <span class="font-black text-white font-mono text-sm">{{ consecutive_absent_count }} consecutive classes</span>!
+                        An automated SMS notification was dispatched to your mobile ({{ user.phone }}).
+                    </p>
+                </div>
+            </div>
+            <span class="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-black uppercase tracking-wider shrink-0 shadow-md">
+                Faculty Escalation
+            </span>
+        </div>
+        {% elif attendance_pct < 75.0 and total_classes > 0 %}
+        <!-- 2. Below 75% Low Attendance Alert -->
+        <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/40 text-amber-200 shadow-lg flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-circle-exclamation text-amber-400 text-xl"></i>
+                <div class="text-xs">
+                    <strong class="text-white font-bold">Attendance Shortage ({{ attendance_pct }}%):</strong> Ward is below the 75% mandatory institutional exam eligibility benchmark.
+                </div>
+            </div>
+            <span class="text-[10px] uppercase font-bold text-amber-400 font-mono">Action Needed</span>
+        </div>
+        {% endif %}
+
+        <!-- Ward Profile & AI Risk Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <!-- Ward Identity Card -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 text-white flex items-center justify-center text-2xl font-bold shadow-lg shadow-cyan-500/20">
+                    {{ student.name[0] if student.name else "S" }}
+                </div>
+                <div>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registered Ward</span>
+                    <h3 class="text-base font-bold text-white">{{ student.name }}</h3>
+                    <p class="text-xs text-cyan-400 font-mono font-semibold">{{ student.reg_no or student.username }}</p>
+                    <p class="text-[10px] text-slate-500">{{ student.class_name }} &bull; {{ student.year }}</p>
+                </div>
+            </div>
+
+            <!-- Attendance Percentage Gauge -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Overall Standing</span>
+                    <span class="text-xs font-mono font-bold {% if attendance_pct >= 75 %}text-emerald-400{% else %}text-rose-400{% endif %}">
+                        {{ attendance_pct }}%
+                    </span>
+                </div>
+                <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-800 mt-2">
+                    <div class="h-full {% if attendance_pct >= 75 %}bg-emerald-500{% else %}bg-rose-500{% endif %} rounded-full transition-all duration-500" style="width: {{ attendance_pct }}%;"></div>
+                </div>
+                <div class="mt-2 text-[10px] text-slate-400 flex justify-between font-mono">
+                    <span>{{ attended_classes }} Attended</span>
+                    <span>{{ total_classes }} Classes Held</span>
+                </div>
+            </div>
+
+            <!-- AI Predictive Standing -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="fa-solid fa-brain text-indigo-400 text-xs"></i>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">AI Forecast Risk</span>
+                </div>
+                {% if ai_insights %}
+                <div class="text-sm font-bold text-white font-mono mt-1">
+                    Projected: <span class="text-indigo-400">{{ ai_insights.projected_pct }}%</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1 leading-snug">
+                    {{ ai_insights.recommendation }}
+                </p>
+                {% else %}
+                <p class="text-xs text-slate-500 mt-2">No historical data to model yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Monthly Attendance Report Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800 mb-4">
+                <div>
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-file-invoice text-indigo-400"></i>
+                        <span>Monthly Attendance Report Card ({{ current_month }})</span>
+                    </h3>
+                    <p class="text-xs text-slate-400">Official monthly institutional summary sent to parent mobile.</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-lg text-xs font-bold font-mono {% if attendance_pct >= 75 %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/20{% else %}bg-rose-500/10 text-rose-400 border border-rose-500/20{% endif %}">
+                    Monthly Score: {{ attendance_pct }}%
+                </span>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs mb-4">
+                <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                    <span class="text-[10px] text-slate-500 block uppercase">Department</span>
+                    <span class="font-bold text-slate-200">{{ student.department }}</span>
+                </div>
+                <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                    <span class="text-[10px] text-slate-500 block uppercase">Class & Year</span>
+                    <span class="font-bold text-slate-200">{{ student.class_name }} ({{ student.year }})</span>
+                </div>
+                <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                    <span class="text-[10px] text-slate-500 block uppercase">Classes Attended</span>
+                    <span class="font-bold text-emerald-400 font-mono">{{ attended_classes }}</span>
+                </div>
+                <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                    <span class="text-[10px] text-slate-500 block uppercase">Classes Missed</span>
+                    <span class="font-bold text-rose-400 font-mono">{{ total_classes - attended_classes }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Verified Attendance Ledger -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+                <div>
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-emerald-400"></i>
+                        <span>Recent Verification Audit Logs</span>
+                    </h3>
+                </div>
+                <span class="text-xs text-slate-400 font-mono">{{ records|length }} verified entries</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="text-slate-400 uppercase tracking-wider bg-slate-950/70 border-b border-slate-800">
+                        <tr>
+                            <th class="py-2.5 px-4">Subject</th>
+                            <th class="py-2.5 px-4">Date</th>
+                            <th class="py-2.5 px-4">Time</th>
+                            <th class="py-2.5 px-4">GPS & Biometric Audit</th>
+                            <th class="py-2.5 px-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800 text-slate-300">
+                        {% if records %}
+                            {% for r in records %}
+                            <tr class="hover:bg-slate-800/40 transition">
+                                <td class="py-3 px-4 font-bold text-white">{{ r.subject }}</td>
+                                <td class="py-3 px-4 font-mono text-slate-400">{{ r.date }}</td>
+                                <td class="py-3 px-4 font-mono text-slate-400">{{ r.time }}</td>
+                                <td class="py-3 px-4 text-slate-400 text-[11px] font-mono">
+                                    {{ r.remarks or 'Dual-Factor Verified' }}
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                        <i class="fa-solid fa-circle-check text-[9px]"></i> {{ r.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="py-12 text-center text-slate-500">
+                                    No attendance entries found for this student.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center text-slate-500">
+            <i class="fa-solid fa-link-slash text-4xl mb-3 text-slate-600"></i>
+            <h3 class="text-base font-bold text-white">No Linked Student Profile</h3>
+            <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">This parent account is not currently linked to any student. Contact Institutional Management to link your ward.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function requestMonthlySms() {
+        const res = await fetch('/api/parent/send_monthly_report', { method: 'POST' });
+        const d = await res.json();
+        alert(d.message);
+    }
+</script>
+{% endblock %}
