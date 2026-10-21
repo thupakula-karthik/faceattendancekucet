@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+
+{% block title %}Teacher Hub - Subject Attendance & Classroom Geofences{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+        <div>
+            <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30 mb-1">
+                <i class="fa-solid fa-chalkboard-user text-[10px]"></i> Faculty Control Center
+            </div>
+            <h1 class="text-2xl font-black text-white tracking-tight">Subject-Wise Attendance & Classroom Geofences</h1>
+            <p class="text-xs text-slate-400">Welcome, {{ user.name }}. Launch subject lecture sessions and request classroom relocation with Admin approval.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="/export_attendance" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-file-excel"></i>
+                <span>Export attendance.xlsx</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Active Class Lecture Banner -->
+    {% if active_session %}
+    <div id="activeSessionBanner" class="bg-gradient-to-r from-amber-950/40 via-slate-900 to-indigo-950/40 border-2 border-amber-500/60 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Scheduled Lecture Active</span>
+                    <span class="text-xs text-slate-500">&bull;</span>
+                    <span class="text-xs font-mono font-bold text-cyan-400">{{ active_session.scheduled_start }} – {{ active_session.scheduled_end }}</span>
+                </div>
+                <h2 class="text-xl font-black text-white">{{ active_session.subject }} ({{ active_session.class_name }})</h2>
+                <div class="text-xs text-slate-300 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span>Enforced Classroom: <strong class="text-amber-300">{{ active_session.venue_name }}</strong></span>
+                    <span>Radius: <strong class="text-indigo-300 font-mono">{{ active_session.radius_meters }}m Geofence</strong></span>
+                    <span>Session Token: <strong class="font-mono text-cyan-300">{{ active_session.session_code }}</strong></span>
+                </div>
+            </div>
+
+            <!-- Geofence Status Badge & Relocation Request Button -->
+            <div class="flex flex-wrap items-center gap-3">
+                {% if active_session.geofence_status == 'CHANGE_PENDING' %}
+                <span class="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5">
+                    <i class="fa-solid fa-clock-rotate-left animate-spin"></i>
+                    <span>Relocation Pending Admin Approval</span>
+                </span>
+                {% else %}
+                <span class="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5">
+                    <i class="fa-solid fa-shield-check"></i>
+                    <span>Geofence Approved by Admin</span>
+                </span>
+                {% endif %}
+
+                <button onclick="openRelocationModal({{ active_session.id }}, '{{ active_session.venue_name }}', {{ active_session.latitude }}, {{ active_session.longitude }}, {{ active_session.radius_meters }})"
+                    class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-location-crosshairs"></i>
+                    <span>Request Classroom Change</span>
+                </button>
+
+                <button onclick="closeCurrentSession({{ active_session.id }})"
+                    class="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-600/30 text-rose-300 hover:bg-rose-600 hover:text-white border border-rose-500/40 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-ban"></i>
+                    <span>End Class</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Session Creation & Assigned Students with Manual Override -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Subject Session Generator (Left 5 Cols) -->
+        <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+            <div class="flex items-center gap-2 pb-3 border-b border-slate-800">
+                <i class="fa-solid fa-calendar-check text-amber-400 text-lg"></i>
+                <h3 class="text-base font-bold text-white">Open Scheduled Subject Lecture</h3>
+            </div>
+
+            <form id="createSessionForm" class="space-y-3.5 text-xs">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Subject / Course Name</label>
+                    <input type="text" id="sessionSubject" required placeholder="e.g. Distributed Systems CS301"
+                        class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Year</label>
+                        <select id="sessionYear" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                            <option value="3rd Year" selected>3rd Year</option>
+                            <option value="1st Year">1st Year</option>
+                            <option value="2nd Year">2nd Year</option>
+                            <option value="4th Year">4th Year</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Class Section</label>
+                        <input type="text" id="sessionClass" value="CS-A" required class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Start Time</label>
+                        <input type="time" id="sessionStartTime" value="09:30" required class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">End Time</label>
+                        <input type="time" id="sessionEndTime" value="10:20" required class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Classroom Geofence (Room-Level)</label>
+                    <select id="sessionVenueSelect" onchange="onVenueChange()"
+                        class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                        {% for v in venues %}
+                        <option value="{{ v.name }}" data-lat="{{ v.latitude }}" data-lon="{{ v.longitude }}" data-radius="{{ v.radius_meters }}">
+                            {{ v.name }} &bull; {{ v.room_no }} ({{ v.radius_meters }}m radius)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Lat</label>
+                        <input type="number" step="0.000001" id="sessionLat" required class="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono text-[11px]">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Lon</label>
+                        <input type="number" step="0.000001" id="sessionLon" required class="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono text-[11px]">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Radius (m)</label>
+                        <input type="number" id="sessionRadius" value="25" required class="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono text-[11px]">
+                    </div>
+                </div>
+
+                <button type="submit" id="launchSessionBtn"
+                    class="w-full py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold rounded-xl shadow-lg shadow-amber-600/25 transition text-xs flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-play"></i>
+                    <span>Open Attendance Window for Subject</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Assigned Students Roster & Live Arrivals (Right 7 Cols) -->
+        <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col h-[580px]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+                <div>
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-user-check text-emerald-400"></i>
+                        <span>Enrolled Roster & Live Verification</span>
+                    </h3>
+                    <p class="text-xs text-slate-400">Students mark presence via Face Scan + Classroom Geofencing.</p>
+                </div>
+                <span class="text-xs text-amber-400 font-mono">{{ assigned_students|length }} Students</span>
+            </div>
+
+            <div class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                {% if assigned_students %}
+                    {% for st in assigned_students %}
+                    <div class="p-3 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between hover:border-slate-700 transition">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold text-xs">
+                                {{ st.name[0] if st.name else "S" }}
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-white">{{ st.name }}</h4>
+                                <div class="text-[10px] text-slate-500 font-mono">
+                                    <span class="text-cyan-400">{{ st.reg_no or st.username }}</span> &bull; {{ st.class_name }} ({{ st.year }})
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right flex items-center gap-2">
+                            {% if st.is_face_enrolled %}
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    Face Active
+                                </span>
+                            {% else %}
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                    No Face
+                                </span>
+                            {% endif %}
+
+                            {% if active_session %}
+                            <button onclick="triggerManualOverride({{ active_session.id }}, {{ st.id }}, '{{ st.name }}')"
+                                class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1">
+                                <i class="fa-solid fa-user-pen"></i> Override
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-20 text-slate-600 text-xs">
+                        No students currently allocated to this faculty account. Contact Management to assign students.
+                    </div>
+                {% endif %}
+            </div>
+
+            {% if active_session %}
+            <div class="pt-3 border-t border-slate-800 mt-2 flex justify-between items-center text-[11px] text-slate-400">
+                <span>Classroom geofence enforced via Haversine formula (room perimeter).</span>
+                <span class="text-emerald-400 font-mono font-bold" id="liveArrivalsCount">Class Attendance Live</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Request Classroom Geofence Change (Requires Admin Approval) -->
+<div id="relocationModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-location-pen text-indigo-400"></i>
+                <span>Request Classroom Geofence Relocation</span>
+            </h3>
+            <button onclick="toggleRelocationModal()" class="text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <p class="text-xs text-slate-400 mb-4">
+            Relocating this class session requires approval from the Head of Management before the new geofence becomes active.
+        </p>
+
+        <form id="relocationForm" class="space-y-3.5 text-xs">
+            <input type="hidden" id="relocSessionId">
+            <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Target Classroom / Venue</label>
+                <select id="relocVenueSelect" onchange="onRelocVenueChange()" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                    {% for v in venues %}
+                    <option value="{{ v.name }}" data-lat="{{ v.latitude }}" data-lon="{{ v.longitude }}" data-radius="{{ v.radius_meters }}">
+                        {{ v.name }} &bull; {{ v.room_no }} ({{ v.radius_meters }}m)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Lat</label>
+                    <input type="number" step="0.000001" id="relocLat" required class="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono text-[11px]">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Lon</label>
+                    <input type="number" step="0.000001" id="relocLon" required class="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono text-[11px]">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Radius (m)</label>
+                    <input type="number" id="relocRadius" value="25" required class="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono text-[11px]">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Reason for Classroom Relocation</label>
+                <textarea id="relocReason" rows="2" required placeholder="e.g. Projector malfunction in Room 101; shifting class to AI Lab 3"
+                    class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="toggleRelocationModal()" class="px-3 py-1.5 rounded-lg font-semibold bg-slate-800 text-slate-300">Cancel</button>
+                <button type="submit" class="px-4 py-1.5 rounded-lg font-bold bg-indigo-600 hover:bg-indigo-500 text-white">Submit to Admin</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function onVenueChange() {
+        const select = document.getElementById('sessionVenueSelect');
+        const opt = select.options[select.selectedIndex];
+        document.getElementById('sessionLat').value = opt.getAttribute('data-lat');
+        document.getElementById('sessionLon').value = opt.getAttribute('data-lon');
+        document.getElementById('sessionRadius').value = opt.getAttribute('data-radius');
+    }
+    onVenueChange();
+
+    function onRelocVenueChange() {
+        const select = document.getElementById('relocVenueSelect');
+        const opt = select.options[select.selectedIndex];
+        document.getElementById('relocLat').value = opt.getAttribute('data-lat');
+        document.getElementById('relocLon').value = opt.getAttribute('data-lon');
+        document.getElementById('relocRadius').value = opt.getAttribute('data-radius');
+    }
+
+    function toggleRelocationModal() {
+        document.getElementById('relocationModal').classList.toggle('hidden');
+    }
+
+    function openRelocationModal(sessionId, currentVenue, lat, lon, radius) {
+        document.getElementById('relocSessionId').value = sessionId;
+        onRelocVenueChange();
+        toggleRelocationModal();
+    }
+
+    document.getElementById('createSessionForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            subject: document.getElementById('sessionSubject').value,
+            year: document.getElementById('sessionYear').value,
+            class_name: document.getElementById('sessionClass').value,
+            scheduled_start: document.getElementById('sessionStartTime').value,
+            scheduled_end: document.getElementById('sessionEndTime').value,
+            venue_name: document.getElementById('sessionVenueSelect').value,
+            latitude: parseFloat(document.getElementById('sessionLat').value),
+            longitude: parseFloat(document.getElementById('sessionLon').value),
+            radius_meters: parseFloat(document.getElementById('sessionRadius').value),
+            duration_minutes: 50
+        };
+
+        const res = await fetch('/api/sessions/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        alert(data.message);
+        if (data.status === 'success') {
+            window.location.reload();
+        }
+    });
+
+    document.getElementById('relocationForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            session_id: parseInt(document.getElementById('relocSessionId').value),
+            new_venue_name: document.getElementById('relocVenueSelect').value,
+            new_latitude: parseFloat(document.getElementById('relocLat').value),
+            new_longitude: parseFloat(document.getElementById('relocLon').value),
+            new_radius_meters: parseFloat(document.getElementById('relocRadius').value),
+            reason: document.getElementById('relocReason').value
+        };
+
+        const res = await fetch('/api/teacher/request_geofence_change', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        alert(data.message);
+        toggleRelocationModal();
+        window.location.reload();
+    });
+
+    async function triggerManualOverride(sessionId, studentId, studentName) {
+        const reason = prompt(`Execute manual attendance override for ${studentName}:`, "Verified in-person (Device battery failure)");
+        if (!reason) return;
+
+        const res = await fetch('/api/attendance/manual_override', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId, student_id: studentId, reason: reason })
+        });
+        const d = await res.json();
+        alert(d.message);
+        window.location.reload();
+    }
+
+    async function closeCurrentSession(id) {
+        if (!confirm("Close this attendance session now?")) return;
+        const res = await fetch(`/api/sessions/${id}/close`, { method: 'POST' });
+        const data = await res.json();
+        alert(data.message);
+        window.location.reload();
+    }
+</script>
+{% endblock %}

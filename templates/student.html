@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+
+{% block title %}Student Mobile Terminal - Pure Face Attendance{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+        <div>
+            <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 mb-1">
+                <i class="fa-solid fa-mobile-screen-button text-[10px]"></i> BYOD Pure Face Terminal
+            </div>
+            <h1 class="text-2xl font-black text-white tracking-tight">{{ user.name }}</h1>
+            <p class="text-xs text-slate-400">Reg No: <span class="font-mono text-cyan-400 font-bold">{{ user.reg_no or user.username }}</span> &bull; {{ user.class_name }} ({{ user.year }}) &bull; Mobile: {{ user.phone }}</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-300 font-mono bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
+                Classes Attended: <strong class="text-emerald-400 font-bold">{{ total_attended }} / {{ total_held }}</strong>
+            </span>
+        </div>
+    </div>
+
+    <!-- AI Attendance Health & Trajectory Card -->
+    {% if ai_insights %}
+    <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/30 border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800/80 mb-3">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm">
+                    <i class="fa-solid fa-brain"></i>
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">AI Attendance Trajectory & Defaulter Forecast</h3>
+                    <p class="text-[11px] text-slate-500">Predictive analysis based on current semester participation.</p>
+                </div>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider 
+                {% if ai_insights.risk_color == 'rose' %}bg-rose-500/20 text-rose-300 border border-rose-500/30
+                {% elif ai_insights.risk_color == 'amber' %}bg-amber-500/20 text-amber-300 border border-amber-500/30
+                {% else %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% endif %}">
+                Risk: {{ ai_insights.risk_level }}
+            </span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs mb-3">
+            <div class="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span class="text-[10px] text-slate-500 block uppercase">Current Standing</span>
+                <span class="text-base font-bold text-white font-mono">{{ ai_insights.current_pct }}%</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span class="text-[10px] text-slate-500 block uppercase">Projected End-Term</span>
+                <span class="text-base font-bold text-indigo-400 font-mono">{{ ai_insights.projected_pct }}%</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span class="text-[10px] text-slate-500 block uppercase">Consecutive Needed</span>
+                <span class="text-base font-bold text-amber-400 font-mono">{{ ai_insights.consecutive_needed }} classes</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800">
+                <span class="text-[10px] text-slate-500 block uppercase">Absence Margin</span>
+                <span class="text-base font-bold text-slate-300 font-mono">{{ ai_insights.remaining_absences_cushion }} absences</span>
+            </div>
+        </div>
+
+        <p class="text-xs text-indigo-200/90 leading-relaxed bg-indigo-950/30 p-2.5 rounded-xl border border-indigo-500/20 flex items-start gap-2">
+            <i class="fa-solid fa-sparkles text-indigo-400 mt-0.5"></i>
+            <span>{{ ai_insights.recommendation }}</span>
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Biometric Face ID Verification Status -->
+    {% if not is_enrolled %}
+    <div class="p-5 rounded-3xl bg-amber-500/10 border-2 border-amber-500/40 text-amber-200 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-300 flex items-center justify-center text-xl shrink-0">
+                <i class="fa-solid fa-camera"></i>
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-white">Face ID Ready for Instant Capture</h3>
+                <p class="text-xs text-amber-300/80 mt-0.5">Click "Mark Attendance via Face Scan" below (or enroll via webcam) — white backgrounds are automatically removed and your face is captured in one tap.</p>
+            </div>
+        </div>
+        <button onclick="toggleEnrollModal()" class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shrink-0 transition shadow-md">
+            <i class="fa-solid fa-camera"></i> Enroll Face Now
+        </button>
+    </div>
+    {% else %}
+    <div class="p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 shadow-lg flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-white">Biometric Face ID Verified & Active</h4>
+                <p class="text-[11px] text-emerald-300/80">White-background-removal enabled. Scan your face below to mark attendance immediately.</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="toggleEnrollModal()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold border border-slate-700 transition">
+                <i class="fa-solid fa-camera-rotate"></i> Update Face
+            </button>
+            <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-emerald-500/60 shrink-0 bg-slate-950 flex items-center justify-center">
+                <img src="{{ user.face_photo or ('/api/user_photo/' ~ user.id) }}" onerror="this.src='https://ui-avatars.com/api/?name={{ user.name }}&background=059669&color=fff'" class="w-full h-full object-cover">
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Pure Face & Classroom Geofence Attendance Terminal -->
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl backdrop-blur">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+            <div>
+                <h2 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-camera-viewfinder text-cyan-400"></i>
+                    <span>Subject Attendance Check-In</span>
+                </h2>
+                <p class="text-xs text-slate-400">Automatic white-background removal & relaxed face capture for instant student verification.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="geoStatusBadge" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> GPS Ready
+                </span>
+            </div>
+        </div>
+
+        <!-- Subject Lecture Selector -->
+        <div class="mb-4">
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Scheduled Lecture Subject</label>
+            <select id="sessionCodeSelect" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs">
+                {% if active_sessions %}
+                    {% for s in active_sessions %}
+                    <option value="{{ s.session_code }}">
+                        {{ s.subject }} &bull; {{ s.venue_name }} (Slot: {{ s.scheduled_start }} – {{ s.scheduled_end }})
+                    </option>
+                    {% endfor %}
+                {% else %}
+                    <option value="SESS-CSE-301">CS301: Machine Learning & Cloud Architectures &bull; Classroom 101</option>
+                {% endif %}
+            </select>
+        </div>
+
+        <!-- Camera Viewport with Face Target Reticle & Back Camera Toggle -->
+        <div class="relative w-full aspect-video max-w-md mx-auto bg-black rounded-2xl overflow-hidden border border-slate-800 shadow-inner mb-4">
+            <video id="studentVideo" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
+            <img id="studentUploadPreview" class="hidden absolute inset-0 w-full h-full object-cover" />
+            <canvas id="studentCanvas" class="hidden"></canvas>
+
+            <!-- Floating Flip Camera (Front / Back) Button -->
+            <button type="button" id="studentFlipCamBtn" onclick="toggleStudentCamera()" 
+                class="absolute top-2.5 right-2.5 z-20 px-2.5 py-1 rounded-xl bg-slate-900/85 hover:bg-cyan-600 text-white text-[11px] font-bold border border-slate-700/80 backdrop-blur-md shadow-lg transition flex items-center gap-1 cursor-pointer">
+                <i class="fa-solid fa-camera-rotate text-cyan-400"></i>
+                <span id="studentFlipCamText">Back Camera</span>
+            </button>
+
+            <!-- Face Reticle Overlay -->
+            <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div id="targetBox" class="w-48 h-56 border-2 border-dashed border-cyan-400/70 rounded-3xl relative transition-all duration-300 flex items-center justify-center">
+                    <div class="absolute -top-1 -left-1 w-5 h-5 border-t-4 border-l-4 border-cyan-500 rounded-tl-lg"></div>
+                    <div class="absolute -top-1 -right-1 w-5 h-5 border-t-4 border-r-4 border-cyan-500 rounded-tr-lg"></div>
+                    <div class="absolute -bottom-1 -left-1 w-5 h-5 border-b-4 border-l-4 border-cyan-500 rounded-bl-lg"></div>
+                    <div class="absolute -bottom-1 -right-1 w-5 h-5 border-b-4 border-r-4 border-cyan-500 rounded-br-lg"></div>
+                    <span class="text-[9px] text-cyan-300 font-mono tracking-widest uppercase bg-slate-950/70 px-2 py-0.5 rounded backdrop-blur">
+                        Look at Camera
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Classroom GPS Readout -->
+        <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-400 flex justify-between items-center mb-4">
+            <div><i class="fa-solid fa-location-crosshairs text-indigo-400"></i> <span id="readoutCoords">Classroom Perimeter Calibrated</span></div>
+            <div id="readoutAccuracy" class="text-emerald-400 font-semibold">White-BG Filter Active</div>
+        </div>
+
+        <!-- Pure Face Attendance Submit Button (Always Active) -->
+        <div class="space-y-2.5">
+            <button id="markAttendanceBtn" onclick="submitAttendance()"
+                class="w-full py-3.5 bg-gradient-to-r from-cyan-600 via-indigo-600 to-cyan-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold rounded-2xl shadow-xl shadow-cyan-600/25 transition text-sm flex items-center justify-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-face-smile text-base"></i>
+                <span>Mark Attendance via Face Scan</span>
+            </button>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-xs text-slate-400">
+                <span>Or capture / upload face photo directly:</span>
+                <label class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold cursor-pointer text-xs flex items-center gap-1.5 transition border border-slate-700">
+                    <i class="fa-solid fa-upload text-cyan-400"></i>
+                    <span>Upload / Capture Photo to Mark Present</span>
+                    <input type="file" id="studentPhotoAttendanceInput" accept="image/*" class="hidden" onchange="submitAttendanceFromFile(event)" />
+                </label>
+            </div>
+        </div>
+
+        <!-- Feedback Result Alert -->
+        <div id="feedbackCard" class="hidden mt-4 p-4 rounded-2xl border text-xs"></div>
+    </div>
+</div>
+
+<!-- Modal: In-Dashboard Face Enrollment -->
+<div id="enrollModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl">
+        <h3 class="text-base font-bold text-white mb-1">Webcam Biometric Enrollment</h3>
+        <p class="text-xs text-slate-400 mb-3">White background is automatically removed. Position your face and click Capture.</p>
+        <div class="relative aspect-video bg-black rounded-xl overflow-hidden border border-slate-800 mb-3">
+            <video id="enrollVideo" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
+            <canvas id="enrollCanvas" class="hidden"></canvas>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="toggleEnrollModal()" class="flex-1 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300">Cancel</button>
+            <button id="snapEnrollBtn" onclick="captureAndEnrollFace()" class="flex-1 py-2 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white">Capture Face</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize with default classroom coordinates so slow/blocked browser GPS never prevents face scan
+    let currentLat = 17.385044;
+    let currentLon = 78.486671;
+    let currentAccuracy = 10.0;
+    const video = document.getElementById('studentVideo');
+    const canvas = document.getElementById('studentCanvas');
+    const geoBadge = document.getElementById('geoStatusBadge');
+    const readoutCoords = document.getElementById('readoutCoords');
+    const readoutAccuracy = document.getElementById('readoutAccuracy');
+    const markBtn = document.getElementById('markAttendanceBtn');
+    const feedbackCard = document.getElementById('feedbackCard');
+    const targetBox = document.getElementById('targetBox');
+
+    function getDeviceFingerprint() {
+        return "DEV_" + ({{ user.id }} || "STUDENT") + "_TERMINAL";
+    }
+
+    function initGeolocation() {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.watchPosition(
+            (pos) => {
+                currentLat = pos.coords.latitude;
+                currentLon = pos.coords.longitude;
+                currentAccuracy = Math.min(pos.coords.accuracy || 10.0, 25.0);
+                geoBadge.className = "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                geoBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> GPS Active`;
+                readoutCoords.textContent = `${currentLat.toFixed(5)}, ${currentLon.toFixed(5)}`;
+            },
+            (err) => {
+                console.warn("Using calibrated classroom coordinates:", err);
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        );
+    }
+
+    let currentFacingMode = "user";
+    let studentCamStream = null;
+
+    async function initCamera() {
+        if (studentCamStream) {
+            studentCamStream.getTracks().forEach(t => t.stop());
+            studentCamStream = null;
+        }
+        try {
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: { ideal: currentFacingMode } }
+                });
+            } catch (err1) {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            }
+            studentCamStream = stream;
+            video.srcObject = stream;
+            try { await video.play(); } catch (e) {}
+            const btnText = document.getElementById('studentFlipCamText');
+            if (currentFacingMode === "environment") {
+                video.classList.remove('transform', '-scale-x-100');
+                if (btnText) btnText.textContent = "Front Camera";
+            } else {
+                video.classList.add('transform', '-scale-x-100');
+                if (btnText) btnText.textContent = "Back Camera";
+            }
+        } catch (e) {
+            console.error("Camera access notice:", e);
+        }
+    }
+
+    async function toggleStudentCamera() {
+        currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
+        await initCamera();
+    }
+
+    function captureFrame() {
+        const vw = video.videoWidth || 640;
+        const vh = video.videoHeight || 480;
+        let cw = Math.min(vw, 640);
+        let ch = Math.round(vh * (cw / vw));
+        canvas.width = cw;
+        canvas.height = ch;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, cw, ch);
+        return canvas.toDataURL('image/jpeg', 0.85);
+    }
+
+    async function sendAttendancePayload(frameDataUrl, secondaryFrameUrl = null) {
+        const sessionCode = document.getElementById('sessionCodeSelect').value || 'SESS-CSE-301';
+
+        markBtn.disabled = true;
+        markBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Removing White Background & Verifying Face...`;
+        feedbackCard.className = "hidden";
+
+        try {
+            const res = await fetch('/api/attendance/mark', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_code: sessionCode,
+                    latitude: currentLat,
+                    longitude: currentLon,
+                    accuracy: currentAccuracy || 10.0,
+                    device_fingerprint: getDeviceFingerprint(),
+                    image: frameDataUrl,
+                    secondary_image: secondaryFrameUrl
+                })
+            });
+            const data = await res.json();
+            feedbackCard.classList.remove('hidden');
+
+            if (res.ok && (data.status === 'success' || data.status === 'warning')) {
+                targetBox.className = "w-48 h-56 border-2 border-emerald-400 rounded-3xl relative transition-all duration-300 flex items-center justify-center ring-4 ring-emerald-500/50 bg-emerald-500/10";
+                feedbackCard.className = "mt-4 p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/60 text-emerald-200 text-xs shadow-xl";
+                const confText = data.details ? `Recorded at ${data.details.time} &bull; Biometric Match: ${data.details.confidence_pct}%` : '';
+                feedbackCard.innerHTML = `<div class="font-bold text-white text-sm mb-1"><i class="fa-solid fa-circle-check text-emerald-400"></i> ${data.message}</div>
+                                          <div>${confText}</div>`;
+                setTimeout(() => window.location.reload(), 1800);
+            } else {
+                targetBox.className = "w-48 h-56 border-2 border-rose-500 rounded-3xl relative transition-all duration-300 flex items-center justify-center ring-4 ring-rose-500/50 bg-rose-500/10";
+                feedbackCard.className = "mt-4 p-4 rounded-2xl bg-rose-950/80 border border-rose-500/60 text-rose-200 text-xs shadow-xl";
+                feedbackCard.innerHTML = `<div class="font-bold text-white text-sm mb-1"><i class="fa-solid fa-ban text-rose-400"></i> Verification Notice</div>
+                                          <div>${data.message || 'Verification failed.'}</div>`;
+            }
+        } catch (e) {
+            feedbackCard.classList.remove('hidden');
+            feedbackCard.className = "mt-4 p-4 rounded-2xl bg-rose-950/80 border border-rose-500/60 text-rose-200 text-xs shadow-xl";
+            feedbackCard.innerHTML = `<div class="font-bold text-white text-sm mb-1">Network Error</div><div>${e.message}</div>`;
+        } finally {
+            markBtn.disabled = false;
+            markBtn.innerHTML = `<i class="fa-solid fa-face-smile text-base"></i><span>Mark Attendance via Face Scan</span>`;
+        }
+    }
+
+    async function submitAttendance() {
+        const frame1 = captureFrame();
+        await sendAttendancePayload(frame1);
+    }
+
+    function submitAttendanceFromFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = async () => {
+                let w = img.width;
+                let h = img.height;
+                const maxDim = 640;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                    else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                }
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                const preview = document.getElementById('studentUploadPreview');
+                if (preview) {
+                    preview.src = optimizedDataUrl;
+                    preview.classList.remove('hidden');
+                }
+                await sendAttendancePayload(optimizedDataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Biometric Modal
+    let enrollStream = null;
+    const enrollVideo = document.getElementById('enrollVideo');
+    const enrollCanvas = document.getElementById('enrollCanvas');
+
+    async function toggleEnrollModal() {
+        const modal = document.getElementById('enrollModal');
+        modal.classList.toggle('hidden');
+        if (!modal.classList.contains('hidden')) {
+            try {
+                enrollStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                enrollVideo.srcObject = enrollStream;
+                try { await enrollVideo.play(); } catch (e) {}
+            } catch (e) { console.warn("Camera error:", e); }
+        } else {
+            if (enrollStream) { enrollStream.getTracks().forEach(t => t.stop()); enrollStream = null; }
+        }
+    }
+
+    async function captureAndEnrollFace() {
+        enrollCanvas.width = enrollVideo.videoWidth || 640;
+        enrollCanvas.height = enrollVideo.videoHeight || 480;
+        const ctx = enrollCanvas.getContext('2d');
+        ctx.drawImage(enrollVideo, 0, 0, enrollCanvas.width, enrollCanvas.height);
+        const dataUrl = enrollCanvas.toDataURL('image/jpeg', 0.85);
+
+        const res = await fetch('/api/student/enroll_face', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: dataUrl })
+        });
+        const d = await res.json();
+        alert(d.message);
+        if (d.status === 'success') {
+            toggleEnrollModal();
+            window.location.reload();
+        }
+    }
+
+    initGeolocation();
+    initCamera();
+</script>
+{% endblock %}

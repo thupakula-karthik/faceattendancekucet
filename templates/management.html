@@ -1,0 +1,2676 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">Institutional Controller</span>
+                <span class="text-xs text-slate-400 font-mono">{{ today }}</span>
+            </div>
+            <h1 class="text-2xl font-black text-white mt-1">Management Administration Console</h1>
+            <p class="text-xs text-slate-400">Institutional user roster, live biometric Face ID enrollment, classroom geofencing, and branches.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <button onclick="toggleModal('newUserModal')" class="px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/30 transition flex items-center gap-2">
+                <i class="fa-solid fa-user-plus"></i>
+                <span>Register User & Send SMS</span>
+            </button>
+            <a href="/api/management/export_data" class="px-3 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md transition flex items-center gap-1.5" title="Download JSON Backup">
+                <i class="fa-solid fa-cloud-arrow-down"></i>
+                <span>Cloud Backup</span>
+            </a>
+            <button onclick="toggleModal('importDataModal')" class="px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1.5" title="Restore Database">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <span>Restore</span>
+            </button>
+            <a href="/export_attendance" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-file-excel"></i>
+                <span>Export Excel</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Institutional KPI Metrics -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-lg border border-cyan-500/20">
+                <i class="fa-solid fa-user-graduate"></i>
+            </div>
+            <div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Students</span>
+                <h3 class="text-xl font-black text-white">{{ total_students }}</h3>
+            </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-lg border border-purple-500/20">
+                <i class="fa-solid fa-chalkboard-user"></i>
+            </div>
+            <div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Faculty</span>
+                <h3 class="text-xl font-black text-white">{{ total_teachers }}</h3>
+            </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-lg border border-indigo-500/20">
+                <i class="fa-solid fa-layer-group"></i>
+            </div>
+            <div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Classrooms</span>
+                <h3 class="text-xl font-black text-white">{{ venues|length }}</h3>
+            </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-lg border border-emerald-500/20">
+                <i class="fa-solid fa-clipboard-check"></i>
+            </div>
+            <div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Present Today</span>
+                <h3 class="text-xl font-black text-white">{{ today_verified }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROMINENT NAVIGATION TABS -->
+    <div class="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
+        <button onclick="switchTab('studentsTab')" id="tabBtn_studentsTab" class="px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 text-white flex items-center gap-2 transition shadow-md shadow-purple-600/20">
+            <i class="fa-solid fa-user-graduate"></i>
+            <span>Students Roster (Class & Year)</span>
+            <span class="px-1.5 py-0.2 rounded-full bg-black/40 text-[10px]">{{ students|length }}</span>
+        </button>
+
+        <button onclick="switchTab('teachersTab')" id="tabBtn_teachersTab" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-slate-400 hover:text-white flex items-center gap-2 transition border border-slate-800">
+            <i class="fa-solid fa-chalkboard-user"></i>
+            <span>Faculty & Teachers</span>
+            <span class="px-1.5 py-0.2 rounded-full bg-black/40 text-[10px]">{{ teachers|length }}</span>
+        </button>
+
+        <button onclick="switchTab('adminsTab')" id="tabBtn_adminsTab" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-slate-400 hover:text-white flex items-center gap-2 transition border border-slate-800">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>Administrators</span>
+            <span class="px-1.5 py-0.2 rounded-full bg-black/40 text-[10px]">{{ admins|length }}</span>
+        </button>
+
+        <button onclick="switchTab('dailyAttendanceTab')" id="tabBtn_dailyAttendanceTab" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-slate-400 hover:text-white flex items-center gap-2 transition border border-slate-800">
+            <i class="fa-solid fa-calendar-check text-emerald-400"></i>
+            <span>Daily Attendance (Present & Absent)</span>
+            <span class="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">{{ presentees_today|length }} Present</span>
+        </button>
+
+        <button onclick="switchTab('geofenceTab')" id="tabBtn_geofenceTab" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-slate-400 hover:text-white flex items-center gap-2 transition border border-slate-800">
+            <i class="fa-solid fa-location-pen"></i>
+            <span>Classroom Geofences</span>
+            {% if pending_geofence_requests %}
+            <span class="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 text-[10px] font-extrabold animate-pulse">{{ pending_geofence_requests|length }} PENDING</span>
+            {% endif %}
+        </button>
+
+        <button onclick="switchTab('branchesTab')" id="tabBtn_branchesTab" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-slate-400 hover:text-white flex items-center gap-2 transition border border-slate-800">
+            <i class="fa-solid fa-graduation-cap"></i>
+            <span>Academic Branches & Classes</span>
+            <span class="px-1.5 py-0.2 rounded-full bg-black/40 text-[10px]">{{ departments|length }}</span>
+        </button>
+
+        <button onclick="switchTab('smsTab')" id="tabBtn_smsTab" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-slate-400 hover:text-white flex items-center gap-2 transition border border-slate-800">
+            <i class="fa-solid fa-comment-sms"></i>
+            <span>SMS Gateway & Logs</span>
+            <span class="px-1.5 py-0.2 rounded-full bg-black/40 text-[10px]">{{ sms_logs|length }}</span>
+        </button>
+    </div>
+
+    <!-- TAB 1: Students Directory (Class-Wise & Year-Wise) -->
+    <div id="studentsTab" class="space-y-4">
+        <!-- Student KPI Metrics Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-md">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Students</span>
+                <h4 class="text-lg font-black text-white" id="statStudentTotal">{{ student_stats.total }}</h4>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-md">
+                <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Face Enrolled</span>
+                <h4 class="text-lg font-black text-emerald-400" id="statStudentEnrolled">{{ student_stats.enrolled_face }}</h4>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-md">
+                <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">Face Pending</span>
+                <h4 class="text-lg font-black text-amber-400" id="statStudentPending">{{ student_stats.pending_face }}</h4>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-md">
+                <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block">1st Year</span>
+                <h4 class="text-lg font-black text-indigo-300">{{ student_stats.by_year['1st Year'] }}</h4>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-md">
+                <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block">2nd Year</span>
+                <h4 class="text-lg font-black text-indigo-300">{{ student_stats.by_year['2nd Year'] }}</h4>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-md">
+                <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block">3rd Year</span>
+                <h4 class="text-lg font-black text-indigo-300">{{ student_stats.by_year['3rd Year'] }}</h4>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-md">
+                <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block">4th Year</span>
+                <h4 class="text-lg font-black text-indigo-300">{{ student_stats.by_year['4th Year'] }}</h4>
+            </div>
+        </div>
+
+        <!-- Student Management Directory Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-800 mb-4 gap-3">
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-user-graduate text-purple-400"></i>
+                        <span>Class-Wise & Year-Wise Student Directory</span>
+                    </h2>
+                    <p class="text-xs text-slate-400">Manage students filtered by academic year, branch discipline, section, and biometric Face ID.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="openAddStudentModal()" class="px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-600/30 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>Add New Student</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dynamic Filter Bar -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 p-3 rounded-2xl bg-slate-950/80 border border-slate-800/80 mb-4 text-xs">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Search Student</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-500 text-xs"></i>
+                        <input type="text" id="studentSearchInput" oninput="filterStudentsTable()" placeholder="Name or Reg No..." class="w-full pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-700/60 rounded-xl text-white text-xs">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Academic Year</label>
+                    <select id="studentYearFilter" onchange="filterStudentsTable()" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700/60 rounded-xl text-white font-semibold text-xs">
+                        <option value="ALL">All Academic Years</option>
+                        <option value="1st Year">1st Year</option>
+                        <option value="2nd Year">2nd Year</option>
+                        <option value="3rd Year">3rd Year</option>
+                        <option value="4th Year">4th Year</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Department / Branch</label>
+                    <select id="studentDeptFilter" onchange="filterStudentsTable()" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700/60 rounded-xl text-white font-semibold text-xs">
+                        <option value="ALL">All Departments</option>
+                        {% for d in departments %}
+                        <option value="{{ d.name }}">{{ d.name }} ({{ d.code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Class Section</label>
+                    <select id="studentClassFilter" onchange="filterStudentsTable()" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700/60 rounded-xl text-white font-semibold text-xs">
+                        <option value="ALL">All Sections</option>
+                        {% for c in classes_list %}
+                        <option value="{{ c.name }}">{{ c.name }} ({{ c.year }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Face ID Status</label>
+                    <select id="studentFaceFilter" onchange="filterStudentsTable()" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700/60 rounded-xl text-white font-semibold text-xs">
+                        <option value="ALL">All (Enrolled & Pending)</option>
+                        <option value="ENROLLED">Enrolled Only (✓)</option>
+                        <option value="PENDING">Pending Face ID (⚠️)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Student Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs" id="studentsTable">
+                    <thead class="text-slate-400 uppercase tracking-wider bg-slate-950/70 border-b border-slate-800">
+                        <tr>
+                            <th class="py-2.5 px-3">Student Identity</th>
+                            <th class="py-2.5 px-3">Department & Year</th>
+                            <th class="py-2.5 px-3">Biometric Face ID</th>
+                            <th class="py-2.5 px-3">Faculty Mentor</th>
+                            <th class="py-2.5 px-3">Phone & Parent Alert</th>
+                            <th class="py-2.5 px-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800 text-slate-300" id="studentsTbody">
+                        {% for s in students %}
+                        <tr class="hover:bg-slate-800/40 transition student-row" 
+                            data-name="{{ s.name|lower }}"
+                            data-reg="{{ (s.reg_no or s.username)|lower }}"
+                            data-year="{{ s.year or '' }}"
+                            data-dept="{{ s.department or '' }}"
+                            data-class="{{ s.class_name or '' }}"
+                            data-enrolled="{{ '1' if s.is_face_enrolled else '0' }}">
+                            <td class="py-3 px-3">
+                                <div class="flex items-center gap-2.5">
+                                    {% if s.face_photo %}
+                                    <img src="{{ s.face_photo }}" class="w-9 h-9 rounded-full object-cover border border-emerald-500/40 shrink-0 shadow-sm" alt="Face">
+                                    {% else %}
+                                    <div class="w-9 h-9 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs font-bold shrink-0 border border-slate-700">
+                                        {{ s.name[:2]|upper }}
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="font-bold text-white text-sm">{{ s.name }}</div>
+                                        <div class="text-[11px] text-indigo-400 font-mono font-semibold">{{ s.reg_no or s.username }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3 px-3">
+                                <div class="font-semibold text-slate-200">{{ s.department or 'General' }}</div>
+                                <div class="text-[11px] text-slate-400 mt-0.5">
+                                    <span class="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300 font-bold border border-indigo-500/20">{{ s.year or 'N/A' }}</span>
+                                    <span class="text-purple-300 font-bold ml-1">Sec {{ s.class_name or 'A' }}</span>
+                                </div>
+                            </td>
+                            <td class="py-3 px-3">
+                                {% if s.is_face_enrolled %}
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
+                                            <i class="fa-solid fa-circle-check"></i> Enrolled ✓
+                                        </span>
+                                        <button onclick="openAdminFaceModal({{ s.id }}, '{{ s.name }}', '{{ s.reg_no or s.username }}', true)"
+                                            class="px-2 py-1 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-[10px] font-bold transition flex items-center gap-1">
+                                            <i class="fa-solid fa-camera"></i> Update
+                                        </button>
+                                    </div>
+                                {% else %}
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold flex items-center gap-1">
+                                            <i class="fa-solid fa-triangle-exclamation"></i> Not Enrolled
+                                        </span>
+                                        <button onclick="openAdminFaceModal({{ s.id }}, '{{ s.name }}', '{{ s.reg_no or s.username }}', false)"
+                                            class="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold shadow-md shadow-purple-600/30 transition flex items-center gap-1">
+                                            <i class="fa-solid fa-camera"></i> Enroll Face ID
+                                        </button>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-3">
+                                <span class="text-amber-400 font-semibold">{{ s.teacher_name or 'Unassigned' }}</span>
+                            </td>
+                            <td class="py-3 px-3 font-mono text-[11px]">
+                                <div><i class="fa-solid fa-mobile-screen text-[9px] text-slate-500"></i> {{ s.phone or 'No Mobile' }}</div>
+                                {% if s.parent_phone %}
+                                <div class="text-emerald-400 flex items-center gap-1.5 mt-0.5">
+                                    <span><i class="fa-solid fa-user-shield text-[9px]"></i> {{ s.parent_phone }}</span>
+                                    <a href="https://wa.me/{{ s.parent_phone|replace('+','')|replace('-','')|replace(' ','') }}" target="_blank" class="text-emerald-400 hover:text-emerald-300 font-bold" title="WhatsApp Parent Alert">
+                                        <i class="fa-brands fa-whatsapp"></i>
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-3 text-right space-x-1">
+                                <button onclick="openEditModal({{ s.id }}, '{{ s.name }}', '{{ s.phone or '' }}', '{{ s.parent_phone or '' }}', '{{ s.email or '' }}', '{{ s.department or '' }}', '{{ s.year or '' }}', '{{ s.class_name or '' }}', '{{ s.assigned_teacher_id or '' }}')"
+                                    class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[11px] transition">
+                                    <i class="fa-solid fa-pen-to-square"></i> Edit
+                                </button>
+                                <button onclick="openResetModal({{ s.id }}, '{{ s.name }}')"
+                                    class="px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-lg text-[11px] transition">
+                                    <i class="fa-solid fa-key"></i>
+                                </button>
+                                <button onclick="deleteUser({{ s.id }}, '{{ s.name }}')"
+                                    class="px-2 py-1 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 rounded-lg text-[11px] transition">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: Faculty & Teachers (Separated Section) -->
+    <div id="teachersTab" class="hidden space-y-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 mb-4 gap-2">
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-chalkboard-user text-purple-400"></i>
+                        <span>Faculty & Teaching Staff ({{ teachers|length }} Registered)</span>
+                    </h2>
+                    <p class="text-xs text-slate-400">Faculty members initiate subject-wise sessions, calibrate classroom perimeters, and monitor student attendance.</p>
+                </div>
+                <div>
+                    <button onclick="openAddTeacherModal()" class="px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-600/30 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>Add New Teacher</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="text-slate-400 uppercase tracking-wider bg-slate-950/70 border-b border-slate-800">
+                        <tr>
+                            <th class="py-2.5 px-3">Faculty Name & Login</th>
+                            <th class="py-2.5 px-3">Department Discipline</th>
+                            <th class="py-2.5 px-3">Role & Permissions</th>
+                            <th class="py-2.5 px-3">Contact Details</th>
+                            <th class="py-2.5 px-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800 text-slate-300">
+                        {% for t in teachers %}
+                        <tr class="hover:bg-slate-800/40 transition">
+                            <td class="py-3 px-3">
+                                <div class="font-bold text-white text-sm">{{ t.name }}</div>
+                                <div class="text-[11px] text-purple-400 font-mono font-semibold">{{ t.username }}</div>
+                            </td>
+                            <td class="py-3 px-3">
+                                <span class="font-semibold text-slate-200">{{ t.department or 'All Departments' }}</span>
+                            </td>
+                            <td class="py-3 px-3">
+                                <span class="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[10px] font-bold">Class Instructor & Mentor</span>
+                            </td>
+                            <td class="py-3 px-3 font-mono text-[11px]">
+                                <div><i class="fa-solid fa-phone text-[9px] text-slate-500"></i> {{ t.phone or 'N/A' }}</div>
+                                <div class="text-slate-400">{{ t.email or 'N/A' }}</div>
+                            </td>
+                            <td class="py-3 px-3 text-right space-x-1">
+                                <button onclick="openEditModal({{ t.id }}, '{{ t.name }}', '{{ t.phone or '' }}', '', '{{ t.email or '' }}', '{{ t.department or '' }}', '', '', '')"
+                                    class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[11px] transition">
+                                    <i class="fa-solid fa-pen-to-square"></i> Edit
+                                </button>
+                                <button onclick="openResetModal({{ t.id }}, '{{ t.name }}')"
+                                    class="px-2.5 py-1 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-lg text-[11px] transition">
+                                    <i class="fa-solid fa-key"></i> Reset
+                                </button>
+                                <button onclick="deleteUser({{ t.id }}, '{{ t.name }}')"
+                                    class="px-2 py-1 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 rounded-lg text-[11px] transition">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: Administrators & Management Staff (Separated Section) -->
+    <div id="adminsTab" class="hidden space-y-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 mb-4 gap-2">
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-shield-halved text-cyan-400"></i>
+                        <span>System Administrators & Platform Controllers ({{ admins|length }})</span>
+                    </h2>
+                    <p class="text-xs text-slate-400">Institutional controllers with root authority over users, facial biometric templates, geofences, and audits.</p>
+                </div>
+                <div>
+                    <button onclick="openAddAdminModal()" class="px-3.5 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-600/30 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-shield"></i>
+                        <span>Add Administrator</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="text-slate-400 uppercase tracking-wider bg-slate-950/70 border-b border-slate-800">
+                        <tr>
+                            <th class="py-2.5 px-3">Administrator Name</th>
+                            <th class="py-2.5 px-3">Username</th>
+                            <th class="py-2.5 px-3">Department / Unit</th>
+                            <th class="py-2.5 px-3">Contact</th>
+                            <th class="py-2.5 px-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800 text-slate-300">
+                        {% for a in admins %}
+                        <tr class="hover:bg-slate-800/40 transition">
+                            <td class="py-3 px-3">
+                                <div class="font-bold text-white text-sm">{{ a.name }}</div>
+                                <span class="px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[10px] font-bold">System Administrator</span>
+                            </td>
+                            <td class="py-3 px-3 font-mono text-cyan-300 font-semibold">{{ a.username }}</td>
+                            <td class="py-3 px-3 text-slate-300">{{ a.department or 'Central Administration' }}</td>
+                            <td class="py-3 px-3 font-mono text-[11px]">
+                                <div><i class="fa-solid fa-phone text-[9px] text-slate-500"></i> {{ a.phone or 'N/A' }}</div>
+                                <div class="text-slate-400">{{ a.email or 'N/A' }}</div>
+                            </td>
+                            <td class="py-3 px-3 text-right space-x-1">
+                                <button onclick="openEditModal({{ a.id }}, '{{ a.name }}', '{{ a.phone or '' }}', '', '{{ a.email or '' }}', '{{ a.department or '' }}', '', '', '')"
+                                    class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[11px] transition">
+                                    <i class="fa-solid fa-pen-to-square"></i> Edit
+                                </button>
+                                <button onclick="openResetModal({{ a.id }}, '{{ a.name }}')"
+                                    class="px-2.5 py-1 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-lg text-[11px] transition">
+                                    <i class="fa-solid fa-key"></i> Reset
+                                </button>
+                                {% if a.id != user.id %}
+                                <button onclick="deleteUser({{ a.id }}, '{{ a.name }}')"
+                                    class="px-2 py-1 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 rounded-lg text-[11px] transition">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: Daily Attendance (Presentees & Absentees Separate, Class-wise & Year-wise) -->
+        <!-- TAB 4: Daily Attendance, Monthly Shortage (<75%), and 4-Day Absence Warnings -->
+    <div id="dailyAttendanceTab" class="hidden space-y-5">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-800 mb-4 gap-3">
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-days text-emerald-400"></i>
+                        <span>Attendance Intelligence & Defaulter Alerts</span>
+                    </h2>
+                    <p class="text-xs text-slate-400">Daily verification, 100% free single-tap WhatsApp & SMS alerts to parents & students for attendance shortages (&lt;75%) and 4-day continuous absences.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="exportDailyExcel()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/30 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span>Download Excel Report</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Top KPI Metrics Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+                <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5 cursor-pointer hover:border-slate-700 transition" onclick="switchAttendanceSubTab('dailyRoster')">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Class Enrolled Strength</span>
+                    <h4 class="text-xl font-black text-white" id="dailyTotalCount">{{ attendance_summary.total }}</h4>
+                    <div class="text-[11px] text-slate-500 mt-0.5">Total registered students</div>
+                </div>
+                <div class="bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-3.5 cursor-pointer hover:border-emerald-500/50 transition" onclick="switchAttendanceSubTab('dailyRoster')">
+                    <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">🟢 Presentees (Today)</span>
+                    <h4 class="text-xl font-black text-emerald-400" id="dailyPresentCount">{{ attendance_summary.present }}</h4>
+                    <div class="text-[11px] text-emerald-300 font-semibold mt-0.5" id="dailyPresentPct">{{ attendance_summary.percentage }}% Attendance Today</div>
+                </div>
+                <div class="bg-amber-950/30 border border-amber-500/30 rounded-2xl p-3.5 cursor-pointer hover:border-amber-500/50 transition" onclick="switchAttendanceSubTab('monthlyShortage')">
+                    <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">⚠️ Monthly Shortage (&lt; 75%)</span>
+                    <h4 class="text-xl font-black text-amber-400" id="kpiMonthlyShortageCount">{{ monthly_shortage.shortage_count }}</h4>
+                    <div class="text-[11px] text-amber-300 font-semibold mt-0.5">Below 75% monthly threshold</div>
+                </div>
+                <div class="bg-rose-950/30 border border-rose-500/30 rounded-2xl p-3.5 cursor-pointer hover:border-rose-500/50 transition" onclick="switchAttendanceSubTab('consecutiveAbsent')">
+                    <span class="text-[10px] font-bold text-rose-400 uppercase tracking-wider block">🚨 4-Day Continuous Absentees</span>
+                    <h4 class="text-xl font-black text-rose-400" id="kpiConsecutiveAbsentCount">{{ consecutive_absentees.consecutive_absent_count }}</h4>
+                    <div class="text-[11px] text-rose-300 font-semibold mt-0.5">Absent 4 consecutive days</div>
+                </div>
+            </div>
+
+            <!-- Attendance Intelligence Sub-Navigation Bar -->
+            <div class="flex flex-wrap items-center gap-2 p-1.5 bg-slate-950 rounded-2xl border border-slate-800 mb-5">
+                <button type="button" id="subTabBtn_dailyRoster" onclick="switchAttendanceSubTab('dailyRoster')"
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-emerald-600 text-white shadow-md">
+                    <i class="fa-solid fa-calendar-day"></i>
+                    <span>1. Daily Roster (Present & Absent)</span>
+                </button>
+                <button type="button" id="subTabBtn_monthlyShortage" onclick="switchAttendanceSubTab('monthlyShortage')"
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-slate-300">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+                    <span>2. Monthly Shortage (&lt; 75% Attendance)</span>
+                    <span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px]" id="badgeMonthlyShortage">{{ monthly_shortage.shortage_count }}</span>
+                </button>
+                <button type="button" id="subTabBtn_consecutiveAbsent" onclick="switchAttendanceSubTab('consecutiveAbsent')"
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-slate-300">
+                    <i class="fa-solid fa-triangle-exclamation text-rose-400"></i>
+                    <span>3. 4-Day Consecutive Absence Warnings</span>
+                    <span class="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px]" id="badgeConsecutiveAbsent">{{ consecutive_absentees.consecutive_absent_count }}</span>
+                </button>
+            </div>
+
+            <!-- SUB-VIEW 1: Daily Roster (Presentees & Absentees) -->
+            <div id="subView_dailyRoster" class="space-y-4">
+                <!-- Filter Controls -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 text-xs">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Date</label>
+                        <div class="flex items-center gap-1.5">
+                            <input type="date" id="dailyAttDate" value="{{ today }}" onchange="fetchDailyAttendance()" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700/60 rounded-xl text-white font-mono text-xs">
+                            <button type="button" onclick="setDailyDate('{{ today }}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold">Today</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Academic Year</label>
+                        <select id="dailyAttYear" onchange="fetchDailyAttendance()" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700/60 rounded-xl text-white font-semibold text-xs">
+                            <option value="ALL">All Academic Years</option>
+                            <option value="1st Year">1st Year</option>
+                            <option value="2nd Year">2nd Year</option>
+                            <option value="3rd Year">3rd Year</option>
+                            <option value="4th Year">4th Year</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Department / Branch</label>
+                        <select id="dailyAttDept" onchange="fetchDailyAttendance()" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700/60 rounded-xl text-white font-semibold text-xs">
+                            <option value="ALL">All Departments</option>
+                            {% for d in departments %}
+                            <option value="{{ d.name }}">{{ d.name }} ({{ d.code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Section</label>
+                        <select id="dailyAttClass" onchange="fetchDailyAttendance()" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700/60 rounded-xl text-white font-semibold text-xs">
+                            <option value="ALL">All Sections</option>
+                            {% for c in classes_list %}
+                            <option value="{{ c.name }}">{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 2 SEPARATE DISTINCT TABLES -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- SECTION 1: PRESENTEES -->
+                    <div class="border border-emerald-500/30 rounded-3xl bg-slate-950/90 p-5 shadow-xl flex flex-col">
+                        <div class="flex items-center justify-between pb-3 border-b border-emerald-500/20 mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                <h3 class="text-sm font-bold text-emerald-400">Verified Presentees (<span id="presenteesHeaderCount">{{ presentees_today|length }}</span>)</h3>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">Present</span>
+                        </div>
+                        <div class="overflow-x-auto flex-1 max-h-[480px]">
+                            <table class="w-full text-left text-xs">
+                                <thead class="text-slate-400 uppercase tracking-wider bg-slate-900 border-b border-slate-800 sticky top-0">
+                                    <tr>
+                                        <th class="py-2 px-2.5">Student</th>
+                                        <th class="py-2 px-2.5">Branch & Year</th>
+                                        <th class="py-2 px-2.5">Verification</th>
+                                        <th class="py-2 px-2.5 text-right">Distance</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="presenteesTbody" class="divide-y divide-slate-800/80 text-slate-300">
+                                    {% for p in presentees_today %}
+                                    <tr class="hover:bg-slate-900/60 transition">
+                                        <td class="py-2.5 px-2.5">
+                                            <div class="font-bold text-white">{{ p.student_name }}</div>
+                                            <div class="text-[10px] text-emerald-400 font-mono">{{ p.reg_no }}</div>
+                                            <div class="text-[10px] text-slate-400">{{ p.subject }}</div>
+                                        </td>
+                                        <td class="py-2.5 px-2.5">
+                                            <div class="text-slate-200 font-semibold">{{ p.department }}</div>
+                                            <div class="text-[10px] text-indigo-300">{{ p.year }} &bull; {{ p.class_name }}</div>
+                                        </td>
+                                        <td class="py-2.5 px-2.5">
+                                            <div class="text-emerald-300 font-mono font-semibold">{{ p.time }}</div>
+                                            <span class="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold">Face 100% ✓</span>
+                                        </td>
+                                        <td class="py-2.5 px-2.5 text-right font-mono text-[11px] text-slate-300">
+                                            {{ p.distance_meters|round(1) if p.distance_meters is not none else 0.0 }}m
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="4" class="py-8 text-center text-slate-500">No students recorded present for this selection.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 2: ABSENTEES -->
+                    <div class="border border-rose-500/30 rounded-3xl bg-slate-950/90 p-5 shadow-xl flex flex-col">
+                        <div class="flex items-center justify-between pb-3 border-b border-rose-500/20 mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+                                <h3 class="text-sm font-bold text-rose-400">Unverified Absentees (<span id="absenteesHeaderCount">{{ absentees_today|length }}</span>)</h3>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="openBatchDispatchModal('absentees')" class="px-2.5 py-1 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-bold transition flex items-center gap-1 shadow-sm">
+                                    <i class="fa-solid fa-paper-plane"></i> Send to All Absentees
+                                </button>
+                                <span class="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-bold border border-rose-500/30">Absent</span>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto flex-1 max-h-[480px]">
+                            <table class="w-full text-left text-xs">
+                                <thead class="text-slate-400 uppercase tracking-wider bg-slate-900 border-b border-slate-800 sticky top-0">
+                                    <tr>
+                                        <th class="py-2 px-2.5">Absent Student</th>
+                                        <th class="py-2 px-2.5">Branch & Year</th>
+                                        <th class="py-2 px-2.5 text-right">Direct Single-Tap Messages</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="absenteesTbody" class="divide-y divide-slate-800/80 text-slate-300">
+                                    {% for a in absentees_today %}
+                                    <tr class="hover:bg-slate-900/60 transition">
+                                        <td class="py-2.5 px-2.5">
+                                            <div class="font-bold text-white">{{ a.name }}</div>
+                                            <div class="text-[10px] text-rose-400 font-mono">{{ a.reg_no or a.username }}</div>
+                                            <div class="text-[10px] text-slate-400"><i class="fa-solid fa-phone text-[9px]"></i> P: {{ a.parent_phone or 'N/A' }} | S: {{ a.phone or 'N/A' }}</div>
+                                        </td>
+                                        <td class="py-2.5 px-2.5">
+                                            <div class="text-slate-200 font-semibold">{{ a.department }}</div>
+                                            <div class="text-[10px] text-indigo-300">{{ a.year }} &bull; {{ a.class_name }}</div>
+                                        </td>
+                                        <td class="py-2.5 px-2.5 text-right">
+                                            <div class="flex flex-wrap items-center justify-end gap-1">
+                                                {% if a.parent_whatsapp_url or a.whatsapp_url %}
+                                                <a href="{{ a.parent_whatsapp_url or a.whatsapp_url }}" target="_blank" class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="WhatsApp Parent">
+                                                    <i class="fa-brands fa-whatsapp"></i> Parent
+                                                </a>
+                                                {% endif %}
+                                                {% if a.parent_sms_url or a.sms_url %}
+                                                <a href="{{ a.parent_sms_url or a.sms_url }}" class="px-2 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="SMS Parent">
+                                                    <i class="fa-solid fa-comment"></i> SMS P
+                                                </a>
+                                                {% endif %}
+                                                {% if a.student_whatsapp_url %}
+                                                <a href="{{ a.student_whatsapp_url }}" target="_blank" class="px-2 py-1 rounded-lg bg-emerald-700/80 hover:bg-emerald-600 text-white text-[10px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="WhatsApp Student">
+                                                    <i class="fa-brands fa-whatsapp"></i> Student
+                                                </a>
+                                                {% endif %}
+                                                {% if a.student_sms_url %}
+                                                <a href="{{ a.student_sms_url }}" class="px-2 py-1 rounded-lg bg-cyan-700/80 hover:bg-cyan-600 text-white text-[10px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="SMS Student">
+                                                    <i class="fa-solid fa-comment"></i> SMS S
+                                                </a>
+                                                {% endif %}
+                                                <button onclick="openManualAttendanceModal({{ a.id }}, '{{ a.name }}')" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-bold transition" title="Manually Mark Present">
+                                                    <i class="fa-solid fa-check"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="3" class="py-8 text-center text-slate-500">100% Attendance! No absentees for this selection.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-VIEW 2: Monthly Attendance Shortage (< 75%) -->
+            <div id="subView_monthlyShortage" class="hidden space-y-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-2xl bg-amber-950/30 border border-amber-500/30 gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg shrink-0 border border-amber-500/30">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-amber-300 flex items-center gap-2">
+                                <span>Monthly Attendance Defaulters (&lt; 75% University Criterion)</span>
+                                <span class="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-extrabold" id="monthlyShortageCountBadge">{{ monthly_shortage.shortage_count }} Students</span>
+                            </h3>
+                            <p class="text-xs text-amber-200/70">Mandatory 75% attendance is required to appear for semester exams. Send instant 1-tap alerts to both parents and students below.</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="openBatchDispatchModal('shortage')" class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-black text-xs transition flex items-center gap-1.5 shadow-lg shadow-amber-600/30">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>Direct Send to All &lt;75% Parents & Students</span>
+                    </button>
+                </div>
+
+                <!-- Shortage Filters -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 text-xs">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Target Month</label>
+                        <input type="month" id="shortageMonth" value="{{ current_month_str }}" onchange="fetchMonthlyShortage()" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700/60 rounded-xl text-white font-mono text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Academic Year</label>
+                        <select id="shortageYear" onchange="fetchMonthlyShortage()" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700/60 rounded-xl text-white font-semibold text-xs">
+                            <option value="ALL">All Academic Years</option>
+                            <option value="1st Year">1st Year</option>
+                            <option value="2nd Year">2nd Year</option>
+                            <option value="3rd Year">3rd Year</option>
+                            <option value="4th Year">4th Year</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Department / Branch</label>
+                        <select id="shortageDept" onchange="fetchMonthlyShortage()" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700/60 rounded-xl text-white font-semibold text-xs">
+                            <option value="ALL">All Departments</option>
+                            {% for d in departments %}
+                            <option value="{{ d.name }}">{{ d.name }} ({{ d.code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Section</label>
+                        <select id="shortageClass" onchange="fetchMonthlyShortage()" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700/60 rounded-xl text-white font-semibold text-xs">
+                            <option value="ALL">All Sections</option>
+                            {% for c in classes_list %}
+                            <option value="{{ c.name }}">{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Shortage Table -->
+                <div class="border border-slate-800 rounded-3xl bg-slate-950 overflow-hidden shadow-xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="text-slate-400 uppercase tracking-wider bg-slate-900 border-b border-slate-800">
+                                <tr>
+                                    <th class="py-3 px-3">Student</th>
+                                    <th class="py-3 px-3">Branch & Year</th>
+                                    <th class="py-3 px-3">Classes Attended</th>
+                                    <th class="py-3 px-3">Monthly Attendance %</th>
+                                    <th class="py-3 px-3 text-right">Direct Single-Tap Messages</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthlyShortageTbody" class="divide-y divide-slate-800/80 text-slate-300">
+                                {% for s in monthly_shortage.shortage_students %}
+                                <tr class="hover:bg-slate-900/60 transition">
+                                    <td class="py-3 px-3">
+                                        <div class="flex items-center gap-2.5">
+                                            {% if s.face_photo %}
+                                            <img src="{{ s.face_photo }}" class="w-9 h-9 rounded-full object-cover border border-amber-500/40 shrink-0" alt="Face">
+                                            {% else %}
+                                            <div class="w-9 h-9 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs font-bold shrink-0 border border-slate-700">
+                                                {{ s.name[:2]|upper }}
+                                            </div>
+                                            {% endif %}
+                                            <div>
+                                                <div class="font-bold text-white">{{ s.name }}</div>
+                                                <div class="text-[10px] text-amber-400 font-mono">{{ s.reg_no or s.username }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        <div class="text-slate-200 font-semibold">{{ s.department }}</div>
+                                        <div class="text-[10px] text-indigo-300">{{ s.year }} &bull; Sec {{ s.class_name }}</div>
+                                    </td>
+                                    <td class="py-3 px-3 font-mono">
+                                        <span class="text-rose-400 font-bold">{{ s.attended_days }}</span> / <span class="text-slate-400">{{ s.total_working_days }} days</span>
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        <div class="flex items-center gap-2">
+                                            <span class="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 font-black font-mono text-xs">
+                                                {{ s.attendance_pct }}% &lt; 75%
+                                            </span>
+                                            <div class="w-20 bg-slate-800 h-2 rounded-full overflow-hidden">
+                                                <div class="bg-rose-500 h-full rounded-full" style="width: {{ s.attendance_pct }}%"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-3 text-right">
+                                        <div class="flex flex-wrap items-center justify-end gap-1.5">
+                                            {% if s.parent_whatsapp_url %}
+                                            <a href="{{ s.parent_whatsapp_url }}" target="_blank" class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="WhatsApp Parent">
+                                                <i class="fa-brands fa-whatsapp"></i> WA Parent
+                                            </a>
+                                            {% endif %}
+                                            {% if s.parent_sms_url %}
+                                            <a href="{{ s.parent_sms_url }}" class="px-2.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="SMS Parent">
+                                                <i class="fa-solid fa-comment"></i> SMS Parent
+                                            </a>
+                                            {% endif %}
+                                            {% if s.student_whatsapp_url %}
+                                            <a href="{{ s.student_whatsapp_url }}" target="_blank" class="px-2.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="WhatsApp Student">
+                                                <i class="fa-brands fa-whatsapp"></i> WA Student
+                                            </a>
+                                            {% endif %}
+                                            {% if s.student_sms_url %}
+                                            <a href="{{ s.student_sms_url }}" class="px-2.5 py-1.5 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="SMS Student">
+                                                <i class="fa-solid fa-comment"></i> SMS Student
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="py-8 text-center text-slate-500">🎉 Great news! All students have 75% or higher attendance for this month.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-VIEW 3: 4-Day Consecutive Absence Warnings -->
+            <div id="subView_consecutiveAbsent" class="hidden space-y-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-2xl bg-rose-950/30 border border-rose-500/30 gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-lg shrink-0 border border-rose-500/30">
+                            <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-rose-300 flex items-center gap-2">
+                                <span>🚨 4-Day Continuous Absence Alert (Immediate Action Required)</span>
+                                <span class="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-extrabold" id="consecutiveCountBadge">{{ consecutive_absentees.consecutive_absent_count }} Students</span>
+                            </h3>
+                            <p class="text-xs text-rose-200/70">Students absent for 4 or more consecutive working days require immediate parental contact and administrative review.</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="openBatchDispatchModal('consecutive')" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs transition flex items-center gap-1.5 shadow-lg shadow-rose-600/30">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>Direct Send to All 4-Day Absentees</span>
+                    </button>
+                </div>
+
+                <!-- 4-Day Table -->
+                <div class="border border-slate-800 rounded-3xl bg-slate-950 overflow-hidden shadow-xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="text-slate-400 uppercase tracking-wider bg-slate-900 border-b border-slate-800">
+                                <tr>
+                                    <th class="py-3 px-3">Student</th>
+                                    <th class="py-3 px-3">Branch & Year</th>
+                                    <th class="py-3 px-3">Continuous Absence</th>
+                                    <th class="py-3 px-3">Dates of Absence</th>
+                                    <th class="py-3 px-3 text-right">Direct Single-Tap Messages</th>
+                                </tr>
+                            </thead>
+                            <tbody id="consecutiveAbsenteesTbody" class="divide-y divide-slate-800/80 text-slate-300">
+                                {% for s in consecutive_absentees.consecutive_absentees %}
+                                <tr class="hover:bg-slate-900/60 transition">
+                                    <td class="py-3 px-3">
+                                        <div class="flex items-center gap-2.5">
+                                            {% if s.face_photo %}
+                                            <img src="{{ s.face_photo }}" class="w-9 h-9 rounded-full object-cover border border-rose-500/40 shrink-0" alt="Face">
+                                            {% else %}
+                                            <div class="w-9 h-9 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs font-bold shrink-0 border border-slate-700">
+                                                {{ s.name[:2]|upper }}
+                                            </div>
+                                            {% endif %}
+                                            <div>
+                                                <div class="font-bold text-white">{{ s.name }}</div>
+                                                <div class="text-[10px] text-rose-400 font-mono">{{ s.reg_no or s.username }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        <div class="text-slate-200 font-semibold">{{ s.department }}</div>
+                                        <div class="text-[10px] text-indigo-300">{{ s.year }} &bull; Sec {{ s.class_name }}</div>
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        <span class="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 font-black text-xs inline-flex items-center gap-1">
+                                            <i class="fa-solid fa-triangle-exclamation"></i> {{ s.consecutive_absent_days }} Days Continuous
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-3 font-mono text-[11px] text-amber-300 font-semibold">
+                                        {{ s.absent_dates_str }}
+                                    </td>
+                                    <td class="py-3 px-3 text-right">
+                                        <div class="flex flex-wrap items-center justify-end gap-1.5">
+                                            {% if s.parent_whatsapp_url %}
+                                            <a href="{{ s.parent_whatsapp_url }}" target="_blank" class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="WhatsApp Parent">
+                                                <i class="fa-brands fa-whatsapp"></i> WA Parent
+                                            </a>
+                                            {% endif %}
+                                            {% if s.parent_sms_url %}
+                                            <a href="{{ s.parent_sms_url }}" class="px-2.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="SMS Parent">
+                                                <i class="fa-solid fa-comment"></i> SMS Parent
+                                            </a>
+                                            {% endif %}
+                                            {% if s.student_whatsapp_url %}
+                                            <a href="{{ s.student_whatsapp_url }}" target="_blank" class="px-2.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="WhatsApp Student">
+                                                <i class="fa-brands fa-whatsapp"></i> WA Student
+                                            </a>
+                                            {% endif %}
+                                            {% if s.student_sms_url %}
+                                            <a href="{{ s.student_sms_url }}" class="px-2.5 py-1.5 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="SMS Student">
+                                                <i class="fa-solid fa-comment"></i> SMS Student
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="py-8 text-center text-slate-500">🎉 No students have 4 or more consecutive absent days!</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+<!-- TAB 2: Classroom Perimeters & GPS Setup -->
+    <div id="geofenceTab" class="hidden space-y-6">
+        <!-- Define New Classroom Geofence Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                <div>
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-location-crosshairs text-emerald-400"></i>
+                        <span>Configure Classroom Geofence Perimeter</span>
+                    </h3>
+                    <p class="text-xs text-slate-400">Add or calibrate micro-geofence perimeters for campus classrooms (20m-35m radius).</p>
+                </div>
+            </div>
+
+            <form id="addVenueForm" class="space-y-4 text-xs">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Classroom / Venue Name</label>
+                        <input type="text" name="name" required placeholder="e.g. Room 302 - CSE Block" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Building / Wing</label>
+                        <input type="text" name="building" required placeholder="e.g. Computer Science Wing" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Room Number</label>
+                        <input type="text" name="room_no" required placeholder="e.g. 302" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Latitude</label>
+                        <input type="number" step="any" id="newVenueLat" name="latitude" required placeholder="17.385044" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Longitude</label>
+                        <input type="number" step="any" id="newVenueLng" name="longitude" required placeholder="78.486671" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Allowed Radius (Meters)</label>
+                        <input type="number" step="1" name="radius_meters" value="25.0" required class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono">
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="useCurrentLocation()" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-500/30 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-crosshairs"></i>
+                        <span>📍 Use My Current GPS Location</span>
+                    </button>
+                    <button type="submit" id="addVenueSubmitBtn" class="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Save Classroom Geofence</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Pending Relocation Approvals Queue -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-location-pen text-amber-400"></i>
+                    <span>Teacher Classroom Relocation Approval Queue</span>
+                </h3>
+                <span class="text-xs text-slate-400 font-mono">{{ pending_geofence_requests|length }} Pending Actions</span>
+            </div>
+
+            {% if pending_geofence_requests %}
+            <div class="space-y-3">
+                {% for req in pending_geofence_requests %}
+                <div class="p-4 rounded-2xl bg-slate-950 border border-amber-500/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-bold text-white">{{ req.teacher_name }}</span>
+                            <span class="text-xs text-indigo-400 font-mono font-bold">({{ req.subject }} - {{ req.class_name }})</span>
+                        </div>
+                        <div class="text-xs text-slate-300 mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                            <span>Current: <strong class="text-slate-400">{{ req.old_venue_name }}</strong></span>
+                            <span>Target: <strong class="text-amber-400">{{ req.new_venue_name }}</strong> (Radius: {{ req.new_radius_meters }}m)</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1 italic">
+                            Reason: "{{ req.reason }}" &bull; <span class="font-mono text-slate-500">Requested: {{ req.requested_at }}</span>
+                        </p>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button onclick="approveGeofence({{ req.id }}, '{{ req.subject }}', '{{ req.new_venue_name }}')"
+                            class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30 transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-check"></i> Approve
+                        </button>
+                        <button onclick="rejectGeofence({{ req.id }}, '{{ req.subject }}')"
+                            class="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-600/30 text-rose-300 hover:bg-rose-600 hover:text-white border border-rose-500/40 transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-xmark"></i> Reject
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="p-6 text-center text-slate-500 text-xs">
+                <i class="fa-solid fa-circle-check text-2xl text-emerald-400 mb-2 block"></i>
+                <span>All classroom geofences are approved and up to date. No pending relocation requests.</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Registered Classroom Perimeters List -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <h3 class="text-base font-bold text-white mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-draw-polygon text-emerald-400"></i>
+                <span>Configured Campus Classrooms ({{ venues|length }} Venues)</span>
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {% for v in venues %}
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 relative group">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-bold text-white">{{ v.name }}</span>
+                        <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">{{ v.radius_meters }}m Radius</span>
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-1">{{ v.building }} &bull; {{ v.room_no }}</div>
+                    <div class="text-[10px] font-mono text-slate-500 mt-0.5">
+                        Lat: {{ v.latitude }} &bull; Lon: {{ v.longitude }}
+                    </div>
+                    <button onclick="deleteVenue({{ v.id }}, '{{ v.name }}')" class="mt-2 text-[10px] text-rose-400 hover:text-rose-300 flex items-center gap-1 transition">
+                        <i class="fa-solid fa-trash-can"></i> Remove Geofence
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: Academic Branches & Departments -->
+    <div id="branchesTab" class="hidden space-y-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                <div>
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-graduation-cap text-cyan-400"></i>
+                        <span>Institutional Academic Branches & Departments</span>
+                    </h3>
+                    <p class="text-xs text-slate-400">Add branches dynamically. These populate all registration and timetable dropdowns.</p>
+                </div>
+            </div>
+
+            <!-- Add Branch Form -->
+            <form id="addDeptForm" class="space-y-3 text-xs mb-6 p-4 bg-slate-950 rounded-2xl border border-slate-800">
+                <h4 class="font-bold text-white text-xs mb-2">Create New Academic Branch</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="sm:col-span-2">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Branch / Department Full Name</label>
+                        <input type="text" name="name" required placeholder="e.g. Chemical Engineering" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Branch Code</label>
+                        <input type="text" name="code" required placeholder="e.g. CHEM" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white uppercase">
+                    </div>
+                </div>
+                <div class="text-right pt-2">
+                    <button type="submit" id="addDeptSubmitBtn" class="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white shadow-md transition flex items-center gap-2 ml-auto">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Add Academic Branch</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Branches List Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {% for d in departments %}
+                <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-white text-xs">{{ d.name }}</div>
+                        <div class="text-[10px] text-cyan-400 font-mono font-bold">{{ d.code }}</div>
+                    </div>
+                    <button onclick="deleteDepartment({{ d.id }}, '{{ d.name }}')" class="text-slate-500 hover:text-rose-400 text-xs p-1.5 transition" title="Delete Branch">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: SMS Gateway & Telecommunication Logs -->
+    <div id="smsTab" class="hidden space-y-6">
+        <!-- 100% Free Single-Tap Messaging & Gateway Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+            <div class="p-4 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 text-emerald-200 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-lg">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl shrink-0 border border-emerald-500/30">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                            <span>100% Free Instant Messaging (Single-Tap WhatsApp & Mobile SMS)</span>
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-extrabold">Active & Free</span>
+                        </h4>
+                        <p class="text-xs text-emerald-300/80">No Twilio balance, No Fast2SMS payments, and No DLT registration needed! Every alert has direct single-tap WhatsApp & SMS action buttons that instantly launch pre-formatted messages to parents & students.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-2">
+                <div>
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-tower-broadcast text-purple-400"></i>
+                        <span>Optional Free Server Gateways (Telegram Bot & Webhooks)</span>
+                    </h3>
+                    <p class="text-xs text-slate-400">Configure free Telegram notifications or custom webhooks for automated institutional channel broadcasting.</p>
+                </div>
+            </div>
+
+            <form id="smsSettingsForm" class="space-y-4 text-xs">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- 1. Free Telegram Bot Gateway -->
+                    <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                        <h4 class="font-bold text-white flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-cyan-400"></span> Free Telegram Bot Gateway (100% Free Forever)
+                        </h4>
+                        <p class="text-[11px] text-slate-400">Unlimited free group/channel delivery without carrier or DLT fees.</p>
+                        <div class="space-y-2">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Telegram Bot Token</label>
+                                <input type="text" name="telegram_bot_token" value="{{ telegram_bot_token }}" placeholder="e.g. 123456789:ABCdefGhIJKlmNo..." class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Telegram Chat ID / Channel</label>
+                                <input type="text" name="telegram_chat_id" value="{{ telegram_chat_id }}" placeholder="e.g. -1001234567890 or @my_channel" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Free Webhook Gateway -->
+                    <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                        <h4 class="font-bold text-white flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-indigo-400"></span> Free Webhook Gateway (Discord / Slack / CallMeBot)
+                        </h4>
+                        <p class="text-[11px] text-slate-400">Dispatches real-time JSON alert webhooks to any custom endpoint.</p>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Webhook Post URL</label>
+                            <input type="text" name="free_webhook_url" value="{{ free_webhook_url }}" placeholder="https://discord.com/api/webhooks/... or https://api.callmebot.com/..." class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono">
+                        </div>
+                    </div>
+
+                    <!-- 3. Fast2SMS (Optional) -->
+                    <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                        <h4 class="font-bold text-white flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Fast2SMS Gateway (India - Optional)
+                        </h4>
+                        <p class="text-[11px] text-slate-400">Optional cellular gateway if you have paid credits / DLT.</p>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Fast2SMS API Authorization Key</label>
+                            <input type="text" name="fast2sms_api_key" value="{{ fast2sms_api_key }}" placeholder="Paste your Fast2SMS API Key here" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono">
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                        <h4 class="font-bold text-white flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-purple-400"></span> Twilio Gateway (International)
+                        </h4>
+                        <p class="text-[11px] text-slate-400">Worldwide cellular SMS delivery.</p>
+                        <div class="space-y-2">
+                            <input type="text" name="twilio_account_sid" value="{{ twilio_account_sid }}" placeholder="Twilio Account SID" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono">
+                            <input type="password" name="twilio_auth_token" placeholder="Twilio Auth Token" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono">
+                            <input type="text" name="twilio_phone_number" value="{{ twilio_phone_number }}" placeholder="Twilio Sender Phone (+1...)" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-mono">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-2">
+                    <div class="text-[11px] text-slate-400 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-info text-cyan-400"></i>
+                        <span>No API key? You can always send messages for 100% free via WhatsApp or phone SIM below.</span>
+                    </div>
+                    <button type="submit" id="saveSmsBtn" class="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition flex items-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Save SMS Gateway Settings</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- SMS Dispatch Logs -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <h3 class="text-base font-bold text-white mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-list-check text-cyan-400"></i>
+                <span>Dispatched SMS Logs & 1-Click Multi-Device Resender</span>
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="text-slate-400 uppercase tracking-wider bg-slate-950/70 border-b border-slate-800">
+                        <tr>
+                            <th class="py-2 px-3">Recipient</th>
+                            <th class="py-2 px-3">Message Preview</th>
+                            <th class="py-2 px-3">Time</th>
+                            <th class="py-2 px-3">Status</th>
+                            <th class="py-2 px-3 text-right">Instant Send</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800 text-slate-300">
+                        {% for log in sms_logs %}
+                        <tr class="hover:bg-slate-800/40 transition">
+                            <td class="py-2.5 px-3">
+                                <div class="font-bold text-white">{{ log.recipient_name }}</div>
+                                <div class="font-mono text-[11px] text-slate-400">{{ log.recipient_phone }}</div>
+                            </td>
+                            <td class="py-2.5 px-3 max-w-xs truncate text-[11px] text-slate-300">
+                                {{ log.message_body }}
+                            </td>
+                            <td class="py-2.5 px-3 font-mono text-[10px] text-slate-500">{{ log.dispatched_at }}</td>
+                            <td class="py-2.5 px-3">
+                                {% if log.status == 'DELIVERED_CARRIER' %}
+                                <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">Carrier Sent</span>
+                                {% else %}
+                                <span class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] font-bold">Logged / Ready</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-2.5 px-3 text-right space-x-1">
+                                <a href="{{ log.whatsapp_url }}" target="_blank" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] inline-flex items-center gap-1 shadow-sm transition">
+                                    <i class="fa-brands fa-whatsapp"></i> WhatsApp
+                                </a>
+                                <a href="{{ log.sms_url }}" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-[10px] inline-flex items-center gap-1 border border-slate-700 transition">
+                                    <i class="fa-solid fa-mobile-screen"></i> Native SMS
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Admin Live Biometric Face ID Capture & Enrollment -->
+<div id="adminFaceModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+    <div class="bg-slate-900 border-2 border-purple-500/50 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div>
+                <h3 id="adminFaceModalTitle" class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-camera text-purple-400"></i>
+                    <span>Enroll 100% Accurate Live Face ID</span>
+                </h3>
+                <p class="text-xs text-slate-400">Enrolling official biometric template for <strong id="adminFaceStudentName" class="text-purple-300"></strong> (<span id="adminFaceStudentRegNo" class="font-mono text-cyan-400"></span>)</p>
+            </div>
+            <button onclick="closeAdminFaceModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <!-- Camera Stream with Biometric Oval Guide & Back Camera Switcher -->
+        <div class="relative w-full h-72 bg-black rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center">
+            <video id="adminFaceVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
+            
+            <!-- Face oval alignment guide -->
+            <div id="adminFaceGuide" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div class="w-44 h-56 border-2 border-dashed border-purple-400/80 rounded-[50%] animate-pulse flex items-center justify-center">
+                    <span class="text-[10px] text-purple-300 bg-black/70 px-2.5 py-0.5 rounded-full font-mono border border-purple-500/30">Align Face Here</span>
+                </div>
+            </div>
+
+            <!-- Floating Switch Camera (Front/Back) Button -->
+            <button type="button" id="adminSwitchCamBtn" onclick="toggleAdminCameraFacing()" 
+                class="absolute top-3 right-3 z-20 px-3 py-1.5 rounded-xl bg-slate-900/85 hover:bg-purple-600 text-white text-xs font-bold border border-slate-700/80 backdrop-blur-md shadow-xl transition flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-camera-rotate text-purple-400"></i>
+                <span id="adminSwitchCamLabel">Switch to Back Camera</span>
+            </button>
+
+            <!-- Camera Mode Indicator Pill -->
+            <div class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-sm text-[10px] font-mono text-slate-300 border border-slate-800 flex items-center gap-1.5 pointer-events-none">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="adminCamModeBadge">Camera: Front (Selfie)</span>
+            </div>
+
+            <!-- Live Preview of Captured Image -->
+            <img id="adminCapturedPreview" class="hidden absolute inset-0 w-full h-full object-cover" />
+            <canvas id="adminFaceCanvas" class="hidden"></canvas>
+        </div>
+
+        <!-- Status Badge -->
+        <div id="adminFaceStatus" class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-center font-mono text-slate-300">
+            Align student's face within the oval in good lighting and click Capture.
+        </div>
+
+        <!-- Actions -->
+        <div class="space-y-2">
+            <!-- Front / Back Camera Quick Selection Buttons -->
+            <div class="flex items-center justify-between px-1 py-0.5 text-xs bg-slate-950/60 p-2 rounded-xl border border-slate-800/80">
+                <span class="text-slate-400 flex items-center gap-1.5 text-[11px] font-semibold">
+                    <i class="fa-solid fa-video text-purple-400"></i> Camera Lens:
+                </span>
+                <div class="flex items-center gap-1.5">
+                    <button type="button" id="btnCamFront" onclick="setAdminCameraFacing('user')" 
+                        class="px-2.5 py-1 rounded-lg bg-purple-600 text-white text-[11px] font-bold transition flex items-center gap-1 shadow-sm">
+                        <i class="fa-solid fa-user"></i> Front (Selfie)
+                    </button>
+                    <button type="button" id="btnCamBack" onclick="setAdminCameraFacing('environment')" 
+                        class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition flex items-center gap-1 border border-slate-700">
+                        <i class="fa-solid fa-camera"></i> Back (Rear)
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button type="button" id="adminCaptureBtn" onclick="captureAdminFace()" class="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-600/30 transition">
+                    <i class="fa-solid fa-camera"></i>
+                    <span>Capture Live Face & Enroll</span>
+                </button>
+                <button type="button" id="adminRetakeBtn" onclick="retakeAdminFace()" class="hidden px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs">
+                    <i class="fa-solid fa-arrows-rotate"></i> Retake
+                </button>
+            </div>
+
+            <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                <span>Or upload official ID photo:</span>
+                <label class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold cursor-pointer text-xs flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-upload"></i>
+                    <span>Browse Photo</span>
+                    <input type="file" id="adminPhotoUpload" accept="image/*" class="hidden" onchange="uploadAdminFaceFile(event)" />
+                </label>
+            </div>
+        </div>
+
+        <input type="hidden" id="adminFaceStudentId" />
+    </div>
+</div>
+
+<!-- Modal: Instant Batch Dispatch for Absentees, Shortages, and 4-Day Warnings -->
+<div id="batchDispatchModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+    <div class="bg-slate-900 border-2 border-indigo-500/50 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2" id="batchModalTitle">
+                    <i class="fa-solid fa-paper-plane text-indigo-400"></i>
+                    <span>Direct Single-Tap Dispatch Queue</span>
+                </h3>
+                <p class="text-xs text-slate-400" id="batchModalSubtitle">Dispatching instant notifications to parents and students.</p>
+            </div>
+            <button onclick="toggleModal('batchDispatchModal')" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="p-3 bg-slate-950 rounded-2xl border border-slate-800 flex items-center justify-between text-xs">
+            <span class="text-slate-400 font-bold uppercase text-[10px]">Select Target:</span>
+            <div class="flex items-center gap-3">
+                <label class="flex items-center gap-1.5 cursor-pointer text-slate-200 font-semibold">
+                    <input type="radio" name="batchTarget" value="parents" checked onchange="updateBatchQueueList()" class="accent-indigo-500"> Parents Only
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer text-slate-200 font-semibold">
+                    <input type="radio" name="batchTarget" value="students" onchange="updateBatchQueueList()" class="accent-indigo-500"> Students Only
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer text-slate-200 font-semibold">
+                    <input type="radio" name="batchTarget" value="both" onchange="updateBatchQueueList()" class="accent-indigo-500"> Both
+                </label>
+            </div>
+        </div>
+
+        <div id="batchStatusAlert" class="hidden p-3 rounded-xl text-xs font-semibold"></div>
+
+        <!-- Recipient Queue List -->
+        <div class="max-h-64 overflow-y-auto space-y-2 pr-1" id="batchQueueList">
+            <!-- Dynamically populated -->
+        </div>
+
+        <!-- Actions -->
+        <div class="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
+            <button type="button" onclick="dispatchBatchServerAlerts()" id="batchServerDispatchBtn" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-md shadow-purple-600/30">
+                <i class="fa-solid fa-bolt"></i>
+                <span>Record & Free Server Dispatch All</span>
+            </button>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="toggleModal('batchDispatchModal')" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<!-- Modal: New User Registration with Instant WhatsApp Links -->
+<!-- Manual Attendance Override Modal -->
+    <div id="manualAttendanceModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800 mb-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+                    <i class="fa-solid fa-clipboard-check text-emerald-400"></i>
+                    <span>Manual Attendance Verification</span>
+                </h3>
+                <button type="button" onclick="toggleModal('manualAttendanceModal')" class="text-slate-500 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="text-xs text-slate-400 mb-4" id="manualAttStudentLabel">Mark student present for official college duty.</p>
+            <form id="manualAttendanceForm" class="space-y-3 text-xs">
+                <input type="hidden" id="manualAttStudentId" name="student_id">
+                <input type="hidden" id="manualAttDate" name="date">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Official Reason / Justification</label>
+                    <input type="text" id="manualAttRemarks" name="remarks" value="Excused Absence / Authorized College Representation" required class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                </div>
+                <div id="manualAttStatus"></div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="toggleModal('manualAttendanceModal')" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold">Cancel</button>
+                    <button type="submit" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-600/30">Verify & Mark Present</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="newUserModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl">
+        <h3 class="text-base font-bold text-white mb-1">Register New User</h3>
+        <p class="text-xs text-slate-400 mb-4">Admin generates accounts and dispatches credentials via SMS and WhatsApp.</p>
+        <form id="newUserForm" class="space-y-3 text-xs">
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Username</label>
+                    <input type="text" name="username" required placeholder="johndoe" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Role</label>
+                    <select id="newRoleSelect" name="role" onchange="onRoleChange(this.value)" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-bold">
+                        <option value="student">Student</option>
+                        <option value="teacher">Teacher</option>
+                        <option value="management">Management (Admin)</option>
+                        <option value="parent">Parent</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Full Name</label>
+                <input type="text" name="name" required placeholder="John Doe" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Mobile Number</label>
+                    <input type="text" name="phone" required placeholder="+91-9876543210" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                </div>
+                <div id="parentPhoneField">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Parent Mobile Number</label>
+                    <input type="text" name="parent_phone" placeholder="+91-9876543299" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                </div>
+            </div>
+
+            <!-- Department Selector -->
+            <div id="deptField">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Academic Branch / Department</label>
+                <select name="department" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                    {% for d in departments %}
+                    <option value="{{ d.name }}">{{ d.name }} ({{ d.code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Student Specific Fields (Year, Class, Mentor) -->
+            <div id="studentFields" class="space-y-3">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Year</label>
+                        <select name="year" class="w-full px-2 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                            <option value="1st Year">1st Year</option>
+                            <option value="2nd Year">2nd Year</option>
+                            <option value="3rd Year" selected>3rd Year</option>
+                            <option value="4th Year">4th Year</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Class Section</label>
+                        <input type="text" name="class_name" value="CS-A" placeholder="CS-A" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Assign Faculty Mentor</label>
+                    <select name="assigned_teacher_id" class="w-full px-2 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                        <option value="">Unassigned (Any Faculty)</option>
+                        {% for t in teachers_list %}
+                        <option value="{{ t.id }}">{{ t.name }} ({{ t.department }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Password</label>
+                    <input type="password" name="password" required placeholder="••••••••" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Email</label>
+                    <input type="email" name="email" placeholder="user@institution.edu" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="toggleModal('newUserModal')" class="px-3 py-1.5 rounded-lg font-semibold bg-slate-800 text-slate-300">Cancel</button>
+                <button type="submit" id="regSubmitBtn" class="px-4 py-1.5 rounded-lg font-bold bg-purple-600 hover:bg-purple-500 text-white">Create & Send Credentials</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Registration Success with Instant WhatsApp & SMS Buttons -->
+<div id="regSuccessModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-slate-900 border-2 border-emerald-500/60 rounded-3xl max-w-md w-full p-6 shadow-2xl">
+        <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div>
+                <h3 class="text-base font-bold text-white">Account Created Successfully!</h3>
+                <p class="text-xs text-slate-400">Credentials logged and ready for dispatch.</p>
+            </div>
+        </div>
+
+        <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs font-mono space-y-1.5 mb-4">
+            <div>Name: <span id="sucName" class="text-white font-bold"></span></div>
+            <div>Registration No: <span id="sucRegNo" class="text-cyan-400 font-bold"></span></div>
+            <div>Password: <span id="sucPassword" class="text-amber-400 font-bold"></span></div>
+            <div>Mobile: <span id="sucPhone" class="text-slate-300"></span></div>
+        </div>
+
+        <div class="space-y-2">
+            <a id="sucStudentWa" href="#" target="_blank" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 transition">
+                <i class="fa-brands fa-whatsapp text-sm"></i>
+                <span>Send Credentials via WhatsApp</span>
+            </a>
+
+            <div class="flex gap-2">
+                <a id="sucStudentSms" href="#" class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-center font-semibold text-xs border border-slate-700">
+                    <i class="fa-solid fa-mobile-screen"></i> Direct Phone SMS
+                </a>
+                <a id="sucParentWa" href="#" target="_blank" class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 text-center font-semibold text-xs border border-slate-700">
+                    <i class="fa-brands fa-whatsapp"></i> Parent WA
+                </a>
+            </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-800 text-right">
+            <button onclick="window.location.reload()" class="px-4 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-white">Done & Refresh</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Import / Restore Data Backup -->
+<div id="importDataModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl">
+        <h3 class="text-base font-bold text-white mb-1">Restore Database from Backup</h3>
+        <p class="text-xs text-slate-400 mb-4">Upload a previously exported JSON backup file to restore all users, classrooms, sessions, and attendance logs.</p>
+        <form id="importDataForm" class="space-y-4 text-xs">
+            <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Select Backup JSON File</label>
+                <input type="file" name="backup_file" accept=".json" required class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-300 file:mr-3 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-500">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="toggleModal('importDataModal')" class="px-3 py-1.5 rounded-lg font-semibold bg-slate-800 text-slate-300">Cancel</button>
+                <button type="submit" id="importSubmitBtn" class="px-4 py-1.5 rounded-lg font-bold bg-indigo-600 hover:bg-indigo-500 text-white">Upload & Restore</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Edit User & Class Allocation -->
+<div id="editUserModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+        <h3 class="text-base font-bold text-white mb-1">Update User & Class Allocation</h3>
+        <p id="editUserNameLabel" class="text-xs text-slate-400 mb-4">Modify mobile numbers, class section, and assigned faculty.</p>
+        <form id="editUserForm" class="space-y-3 text-xs">
+            <input type="hidden" id="editUserId" name="user_id">
+            <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Full Name</label>
+                <input type="text" id="editUserName" name="name" required class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Student Mobile</label>
+                    <input type="text" id="editUserPhone" name="phone" required class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Parent Mobile</label>
+                    <input type="text" id="editParentPhone" name="parent_phone" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Year</label>
+                    <select id="editUserYear" name="year" class="w-full px-2 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                        <option value="1st Year">1st Year</option>
+                        <option value="2nd Year">2nd Year</option>
+                        <option value="3rd Year">3rd Year</option>
+                        <option value="4th Year">4th Year</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Class Section</label>
+                    <input type="text" id="editUserClass" name="class_name" placeholder="CS-A" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Assigned Teacher</label>
+                    <select id="editAssignedTeacher" name="assigned_teacher_id" class="w-full px-2 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+                        <option value="">None</option>
+                        {% for t in teachers_list %}
+                        <option value="{{ t.id }}">{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Email</label>
+                <input type="email" id="editUserEmail" name="email" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="toggleModal('editUserModal')" class="px-3 py-1.5 rounded-lg font-semibold bg-slate-800 text-slate-300">Cancel</button>
+                <button type="submit" class="px-4 py-1.5 rounded-lg font-bold bg-purple-600 hover:bg-purple-500 text-white">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Admin Password Reset -->
+<div id="resetPwdModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+        <h3 class="text-base font-bold text-white mb-1">Administrative Password Override</h3>
+        <p id="resetUserNameLabel" class="text-xs text-slate-400 mb-4">Reset password and dispatch SMS notice to user's mobile.</p>
+        <form id="resetPwdForm" class="space-y-3 text-xs">
+            <input type="hidden" id="resetUserId" name="user_id">
+            <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">New Password</label>
+                <input type="password" id="resetNewPwd" name="new_password" required placeholder="Minimum 4 characters" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="toggleModal('resetPwdModal')" class="px-3 py-1.5 rounded-lg font-semibold bg-slate-800 text-slate-300">Cancel</button>
+                <button type="submit" class="px-4 py-1.5 rounded-lg font-bold bg-rose-600 hover:bg-rose-500 text-white">Execute Reset</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let adminStream = null;
+
+    function toggleModal(id) {
+        document.getElementById(id).classList.toggle('hidden');
+    }
+
+    function switchTab(tabId) {
+        ['studentsTab', 'teachersTab', 'adminsTab', 'dailyAttendanceTab', 'geofenceTab', 'branchesTab', 'smsTab'].forEach(t => {
+            const el = document.getElementById(t);
+            if (el) el.classList.add('hidden');
+            const btn = document.getElementById('tabBtn_' + t);
+            if (btn) btn.className = "px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-slate-400 hover:text-white flex items-center gap-2 transition border border-slate-800";
+        });
+        const target = document.getElementById(tabId);
+        if (target) target.classList.remove('hidden');
+        const activeBtn = document.getElementById('tabBtn_' + tabId);
+        if (activeBtn) activeBtn.className = "px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 text-white flex items-center gap-2 transition shadow-md shadow-purple-600/20";
+    }
+
+    function openAddStudentModal() {
+        const sel = document.getElementById('newRoleSelect');
+        if (sel) { sel.value = 'student'; onRoleChange('student'); }
+        toggleModal('newUserModal');
+    }
+
+    function openAddTeacherModal() {
+        const sel = document.getElementById('newRoleSelect');
+        if (sel) { sel.value = 'teacher'; onRoleChange('teacher'); }
+        toggleModal('newUserModal');
+    }
+
+    function openAddAdminModal() {
+        const sel = document.getElementById('newRoleSelect');
+        if (sel) { sel.value = 'management'; onRoleChange('management'); }
+        toggleModal('newUserModal');
+    }
+
+    function filterStudentsTable() {
+        const search = (document.getElementById('studentSearchInput')?.value || '').toLowerCase().trim();
+        const year = document.getElementById('studentYearFilter')?.value || 'ALL';
+        const dept = document.getElementById('studentDeptFilter')?.value || 'ALL';
+        const cls = document.getElementById('studentClassFilter')?.value || 'ALL';
+        const face = document.getElementById('studentFaceFilter')?.value || 'ALL';
+
+        const rows = document.querySelectorAll('#studentsTbody tr.student-row');
+        let visibleCount = 0;
+        let enrolledCount = 0;
+        let pendingCount = 0;
+
+        rows.forEach(r => {
+            const rName = r.getAttribute('data-name') || '';
+            const rReg = r.getAttribute('data-reg') || '';
+            const rYear = r.getAttribute('data-year') || '';
+            const rDept = r.getAttribute('data-dept') || '';
+            const rClass = r.getAttribute('data-class') || '';
+            const rEnrolled = r.getAttribute('data-enrolled') || '0';
+
+            let match = true;
+            if (search && !rName.includes(search) && !rReg.includes(search)) match = false;
+            if (year !== 'ALL' && rYear !== year) match = false;
+            if (dept !== 'ALL' && rDept !== dept) match = false;
+            if (cls !== 'ALL' && rClass !== cls) match = false;
+            if (face === 'ENROLLED' && rEnrolled !== '1') match = false;
+            if (face === 'PENDING' && rEnrolled === '1') match = false;
+
+            if (match) {
+                r.style.display = '';
+                visibleCount++;
+                if (rEnrolled === '1') enrolledCount++;
+                else pendingCount++;
+            } else {
+                r.style.display = 'none';
+            }
+        });
+
+        const statTotal = document.getElementById('statStudentTotal');
+        if (statTotal) statTotal.textContent = visibleCount;
+        const statEnrolled = document.getElementById('statStudentEnrolled');
+        if (statEnrolled) statEnrolled.textContent = enrolledCount;
+        const statPending = document.getElementById('statStudentPending');
+        if (statPending) statPending.textContent = pendingCount;
+    }
+
+    async function fetchDailyAttendance() {
+        const date = document.getElementById('dailyAttDate')?.value || '';
+        const year = document.getElementById('dailyAttYear')?.value || 'ALL';
+        const dept = document.getElementById('dailyAttDept')?.value || 'ALL';
+        const cls = document.getElementById('dailyAttClass')?.value || 'ALL';
+
+        const pTbody = document.getElementById('presenteesTbody');
+        const aTbody = document.getElementById('absenteesTbody');
+
+        try {
+            const params = new URLSearchParams({ date, year, department: dept, class_name: cls });
+            const res = await fetch('/api/management/daily_attendance_data?' + params.toString());
+            const data = await res.json();
+            if (data.status === 'success') {
+                document.getElementById('dailyTotalCount').textContent = data.summary.total_students;
+                document.getElementById('dailyPresentCount').textContent = data.summary.present_count;
+                document.getElementById('dailyPresentPct').textContent = data.summary.attendance_pct + '% Attendance';
+                document.getElementById('dailyAbsentCount').textContent = data.summary.absent_count;
+                const absPct = data.summary.total_students > 0 ? (100.0 - parseFloat(data.summary.attendance_pct)).toFixed(1) : '0.0';
+                document.getElementById('dailyAbsentPct').textContent = absPct + '% Absenteeism';
+
+                document.getElementById('presenteesHeaderCount').textContent = data.presentees.length;
+                document.getElementById('absenteesHeaderCount').textContent = data.absentees.length;
+
+                // Render Presentees
+                if (data.presentees.length === 0) {
+                    pTbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500">No students recorded present for this selection.</td></tr>';
+                } else {
+                    pTbody.innerHTML = data.presentees.map(p => `
+                        <tr class="hover:bg-slate-900/60 transition">
+                            <td class="py-2.5 px-2.5">
+                                <div class="font-bold text-white">${p.student_name}</div>
+                                <div class="text-[10px] text-emerald-400 font-mono">${p.reg_no || ''}</div>
+                                <div class="text-[10px] text-slate-400">${p.subject || ''}</div>
+                            </td>
+                            <td class="py-2.5 px-2.5">
+                                <div class="text-slate-200 font-semibold">${p.department || ''}</div>
+                                <div class="text-[10px] text-indigo-300">${p.year || ''} &bull; ${p.class_name || ''}</div>
+                            </td>
+                            <td class="py-2.5 px-2.5">
+                                <div class="text-emerald-300 font-mono font-semibold">${p.time || ''}</div>
+                                <span class="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold">Face Verified ✓</span>
+                            </td>
+                            <td class="py-2.5 px-2.5 text-right font-mono text-[11px] text-slate-300">
+                                ${p.distance_meters !== null ? parseFloat(p.distance_meters).toFixed(1) + 'm' : '0.0m'}
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+
+                // Render Absentees
+                if (data.absentees.length === 0) {
+                    aTbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500">100% Attendance! No absentees for this selection.</td></tr>';
+                } else {
+                    aTbody.innerHTML = data.absentees.map(a => `
+                        <tr class="hover:bg-slate-900/60 transition">
+                            <td class="py-2.5 px-2.5">
+                                <div class="font-bold text-white">${a.name}</div>
+                                <div class="text-[10px] text-rose-400 font-mono">${a.reg_no || a.username}</div>
+                            </td>
+                            <td class="py-2.5 px-2.5">
+                                <div class="text-slate-200 font-semibold">${a.department || ''}</div>
+                                <div class="text-[10px] text-indigo-300">${a.year || ''} &bull; ${a.class_name || ''}</div>
+                            </td>
+                            <td class="py-2.5 px-2.5 font-mono text-[11px]">
+                                <div class="text-slate-300">${a.parent_phone || a.phone || 'No Mobile'}</div>
+                            </td>
+                            <td class="py-2.5 px-2.5 text-right space-x-1">
+                                ${a.whatsapp_url ? `
+                                    <a href="${a.whatsapp_url}" target="_blank" class="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold transition inline-flex items-center gap-1" title="Send WhatsApp Absence Alert">
+                                        <i class="fa-brands fa-whatsapp"></i> Alert
+                                    </a>
+                                ` : ''}
+                                <button onclick="openManualAttendanceModal(${a.id}, '${a.name}')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-bold transition" title="Manually Mark Present">
+                                    <i class="fa-solid fa-check"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            }
+        } catch (e) {
+            console.error("Daily attendance fetch error:", e);
+        }
+    }
+
+    function setDailyDate(dt) {
+        const inp = document.getElementById('dailyAttDate');
+        if (inp) { inp.value = dt; fetchDailyAttendance(); }
+    }
+
+    function exportDailyExcel() {
+        const date = document.getElementById('dailyAttDate')?.value || '';
+        const year = document.getElementById('dailyAttYear')?.value || 'ALL';
+        const dept = document.getElementById('dailyAttDept')?.value || 'ALL';
+        const params = new URLSearchParams({ date, year, department: dept });
+        window.location.href = '/api/management/export_daily_attendance?' + params.toString();
+    }
+
+    async function deleteUser(userId, userName) {
+        if (!confirm(`Are you sure you want to permanently delete user account '${userName}'?`)) {
+            return;
+        }
+        try {
+            const res = await fetch(`/api/management/delete_user/${userId}`, { method: 'POST' });
+            const d = await res.json();
+            if (d.status === 'success') {
+                alert(d.message);
+                window.location.reload();
+            } else {
+                alert('Deletion failed: ' + d.message);
+            }
+        } catch (e) {
+            alert('Server error during user deletion.');
+        }
+    }
+
+    function openManualAttendanceModal(studentId, studentName) {
+        const date = document.getElementById('dailyAttDate')?.value || new Date().toISOString().split('T')[0];
+        document.getElementById('manualAttStudentId').value = studentId;
+        document.getElementById('manualAttDate').value = date;
+        document.getElementById('manualAttStudentLabel').textContent = `Verify attendance for '${studentName}' on ${date}`;
+        document.getElementById('manualAttStatus').innerHTML = '';
+        toggleModal('manualAttendanceModal');
+    }
+
+    function onRoleChange(role) {
+        const studentFields = document.getElementById('studentFields');
+        const parentPhoneField = document.getElementById('parentPhoneField');
+        const deptField = document.getElementById('deptField');
+
+        if (role === 'management') {
+            studentFields.classList.add('hidden');
+            parentPhoneField.classList.add('hidden');
+            deptField.classList.add('hidden');
+        } else if (role === 'teacher') {
+            studentFields.classList.add('hidden');
+            parentPhoneField.classList.add('hidden');
+            deptField.classList.remove('hidden');
+        } else if (role === 'parent') {
+            studentFields.classList.add('hidden');
+            parentPhoneField.classList.remove('hidden');
+            deptField.classList.add('hidden');
+        } else { // student
+            studentFields.classList.remove('hidden');
+            parentPhoneField.classList.remove('hidden');
+            deptField.classList.remove('hidden');
+        }
+    }
+
+    // --- Admin Live Camera Biometric Face ID Enrollment (With Back Camera Option) ---
+    let adminFacingMode = "user"; // 'user' = Front Camera, 'environment' = Back/Rear Camera
+
+    async function startAdminCamera(facing = null) {
+        if (facing) {
+            adminFacingMode = facing;
+        }
+        stopAdminCamera();
+
+        const video = document.getElementById('adminFaceVideo');
+        const statusBox = document.getElementById('adminFaceStatus');
+        const modeBadge = document.getElementById('adminCamModeBadge');
+        const switchLabel = document.getElementById('adminSwitchCamLabel');
+        const switchBtn = document.getElementById('adminSwitchCamBtn');
+        const btnFront = document.getElementById('btnCamFront');
+        const btnBack = document.getElementById('btnCamBack');
+
+        // Update UI badges & buttons to reflect current camera
+        const isBack = (adminFacingMode === "environment");
+        if (modeBadge) {
+            modeBadge.textContent = isBack ? "Camera: Back (Rear)" : "Camera: Front (Selfie)";
+        }
+        if (switchLabel) {
+            switchLabel.textContent = isBack ? "Switch to Front Camera" : "Switch to Back Camera";
+        }
+        if (btnFront && btnBack) {
+            if (isBack) {
+                btnBack.className = "px-2.5 py-1 rounded-lg bg-purple-600 text-white text-[11px] font-bold transition flex items-center gap-1 shadow-sm";
+                btnFront.className = "px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition flex items-center gap-1 border border-slate-700";
+            } else {
+                btnFront.className = "px-2.5 py-1 rounded-lg bg-purple-600 text-white text-[11px] font-bold transition flex items-center gap-1 shadow-sm";
+                btnBack.className = "px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold transition flex items-center gap-1 border border-slate-700";
+            }
+        }
+
+        try {
+            // Request camera with selected facingMode (works seamlessly across mobile Safari, Android Chrome, and laptops)
+            let constraints = {
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: { ideal: adminFacingMode }
+                }
+            };
+
+            try {
+                adminStream = await navigator.mediaDevices.getUserMedia(constraints);
+            } catch (errConstraint) {
+                console.warn("Fallback to relaxed camera constraint:", errConstraint);
+                adminStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 640 }, height: { ideal: 480 } }
+                });
+            }
+
+            video.srcObject = adminStream;
+            try {
+                await video.play();
+            } catch (playErr) {
+                console.warn("Video play notice:", playErr);
+            }
+            document.getElementById('adminCapturedPreview').classList.add('hidden');
+            video.classList.remove('hidden');
+            document.getElementById('adminFaceGuide').classList.remove('hidden');
+            document.getElementById('adminCaptureBtn').classList.remove('hidden');
+            document.getElementById('adminRetakeBtn').classList.add('hidden');
+            if (switchBtn) switchBtn.classList.remove('hidden');
+
+            statusBox.textContent = "Camera active (" + (isBack ? "Back / Rear" : "Front / Selfie") + "). Center student's full face inside the oval and click Capture.";
+        } catch (err) {
+            statusBox.textContent = "Camera access error: " + err.message + ". You can switch camera mode or use Browse Photo below.";
+        }
+    }
+
+    function stopAdminCamera() {
+        if (adminStream) {
+            adminStream.getTracks().forEach(t => t.stop());
+            adminStream = null;
+        }
+    }
+
+    async function toggleAdminCameraFacing() {
+        // Toggle between Front and Back
+        adminFacingMode = (adminFacingMode === "user") ? "environment" : "user";
+        await startAdminCamera(adminFacingMode);
+    }
+
+    async function setAdminCameraFacing(mode) {
+        if (adminFacingMode !== mode) {
+            adminFacingMode = mode;
+            await startAdminCamera(adminFacingMode);
+        }
+    }
+
+    function openAdminFaceModal(studentId, studentName, studentRegNo, isUpdate) {
+        document.getElementById('adminFaceStudentId').value = studentId;
+        document.getElementById('adminFaceStudentName').textContent = studentName;
+        document.getElementById('adminFaceStudentRegNo').textContent = studentRegNo;
+        document.getElementById('adminFaceModalTitle').textContent = isUpdate ? "Update Biometric Face ID" : "Enroll 100% Accurate Live Face ID";
+        toggleModal('adminFaceModal');
+        startAdminCamera();
+    }
+
+    function closeAdminFaceModal() {
+        stopAdminCamera();
+        toggleModal('adminFaceModal');
+    }
+
+    async function captureAdminFace() {
+        const video = document.getElementById('adminFaceVideo');
+        const canvas = document.getElementById('adminFaceCanvas');
+        const preview = document.getElementById('adminCapturedPreview');
+        const statusBox = document.getElementById('adminFaceStatus');
+        const studentId = document.getElementById('adminFaceStudentId').value;
+
+        if (!studentId) {
+            statusBox.innerHTML = `<span class="text-rose-400 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> Student ID is missing. Please close and re-open modal.</span>`;
+            return;
+        }
+
+        if (!video.videoWidth || video.videoWidth === 0) {
+            statusBox.innerHTML = `<span class="text-rose-400 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> Camera is initializing. Please wait 1 second or use Browse Photo.</span>`;
+            return;
+        }
+
+        // Clamp capture resolution to standard 640px to ensure fast upload (<100KB) and prevent multipart size limits
+        const vw = video.videoWidth || 640;
+        const vh = video.videoHeight || 480;
+        let cw = Math.min(vw, 640);
+        let ch = Math.round(vh * (cw / vw));
+
+        canvas.width = cw;
+        canvas.height = ch;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, cw, ch);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        preview.src = dataUrl;
+        preview.classList.remove('hidden');
+        video.classList.add('hidden');
+        document.getElementById('adminFaceGuide').classList.add('hidden');
+        document.getElementById('adminCaptureBtn').classList.add('hidden');
+        document.getElementById('adminRetakeBtn').classList.remove('hidden');
+        const swBtn = document.getElementById('adminSwitchCamBtn'); if (swBtn) swBtn.classList.add('hidden');
+
+        statusBox.innerHTML = `<i class="fa-solid fa-spinner animate-spin text-purple-400"></i> Removing wall background & extracting face template...`;
+
+        const fd = new FormData();
+        fd.append('student_id', studentId);
+        fd.append('image', dataUrl);
+
+        try {
+            const res = await fetch('/api/management/enroll_student_face', { method: 'POST', body: fd });
+            const d = await res.json();
+            if (res.ok && d.status === 'success') {
+                statusBox.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-circle-check"></i> ${d.message}</span>`;
+                setTimeout(() => { closeAdminFaceModal(); window.location.reload(); }, 1600);
+            } else {
+                const msg = d.message || (d.detail ? (Array.isArray(d.detail) ? d.detail.map(x => x.msg).join(', ') : d.detail) : 'Verification failed.');
+                statusBox.innerHTML = `<span class="text-rose-400 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> ${msg}</span>`;
+            }
+        } catch (e) {
+            statusBox.innerHTML = `<span class="text-rose-400 font-bold">Upload network error: ${e.message}</span>`;
+        }
+    }
+
+    function retakeAdminFace() {
+        document.getElementById('adminCapturedPreview').classList.add('hidden');
+        document.getElementById('adminFaceVideo').classList.remove('hidden');
+        document.getElementById('adminFaceGuide').classList.remove('hidden');
+        document.getElementById('adminCaptureBtn').classList.remove('hidden');
+        document.getElementById('adminRetakeBtn').classList.add('hidden');
+        const swBtn = document.getElementById('adminSwitchCamBtn'); if (swBtn) swBtn.classList.remove('hidden');
+        document.getElementById('adminFaceStatus').textContent = "Camera active. Align face inside oval and click Capture.";
+        const photoInput = document.getElementById('adminPhotoUpload');
+        if (photoInput) photoInput.value = "";
+    }
+
+    function uploadAdminFaceFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const statusBox = document.getElementById('adminFaceStatus');
+        const studentId = document.getElementById('adminFaceStudentId').value;
+
+        if (!studentId) {
+            statusBox.innerHTML = `<span class="text-rose-400 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> Student ID is missing. Please close and re-open modal.</span>`;
+            return;
+        }
+
+        statusBox.innerHTML = `<i class="fa-solid fa-spinner animate-spin text-purple-400"></i> Reading and resizing official photo...`;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const rawDataUrl = e.target.result;
+
+            // Client-side image resize to max 800px so high-resolution smartphone photos (5MB+) upload in under 120KB!
+            const img = new Image();
+            img.onload = async () => {
+                let w = img.width;
+                let h = img.height;
+                const maxDim = 800;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) {
+                        h = Math.round((h * maxDim) / w);
+                        w = maxDim;
+                    } else {
+                        w = Math.round((w * maxDim) / h);
+                        h = maxDim;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.86);
+
+                // Show preview in modal
+                const preview = document.getElementById('adminCapturedPreview');
+                const video = document.getElementById('adminFaceVideo');
+                preview.src = optimizedDataUrl;
+                preview.classList.remove('hidden');
+                video.classList.add('hidden');
+                document.getElementById('adminFaceGuide').classList.add('hidden');
+                document.getElementById('adminCaptureBtn').classList.add('hidden');
+                document.getElementById('adminRetakeBtn').classList.remove('hidden');
+
+                const fd = new FormData();
+                fd.append('student_id', studentId);
+                fd.append('image', optimizedDataUrl);
+
+                try {
+                    const res = await fetch('/api/management/enroll_student_face', { method: 'POST', body: fd });
+                    const d = await res.json();
+                    if (res.ok && d.status === 'success') {
+                        statusBox.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-circle-check"></i> ${d.message}</span>`;
+                        setTimeout(() => { closeAdminFaceModal(); window.location.reload(); }, 1600);
+                    } else {
+                        const msg = d.message || (d.detail ? (Array.isArray(d.detail) ? d.detail.map(x => x.msg).join(', ') : d.detail) : 'Photo registration failed.');
+                        statusBox.innerHTML = `<span class="text-rose-400 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> ${msg}</span>`;
+                    }
+                } catch (err) {
+                    statusBox.innerHTML = `<span class="text-rose-400 font-bold">Upload network error: ${err.message}</span>`;
+                }
+            };
+            img.onerror = () => {
+                statusBox.innerHTML = `<span class="text-rose-400 font-bold">Failed to load selected image file.</span>`;
+            };
+            img.src = rawDataUrl;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // --- Geolocation helper ---
+    function useCurrentLocation() {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your device browser.");
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                document.getElementById('newVenueLat').value = pos.coords.latitude.toFixed(6);
+                document.getElementById('newVenueLng').value = pos.coords.longitude.toFixed(6);
+                alert(`GPS Coordinates Acquired:\nLatitude: ${pos.coords.latitude.toFixed(6)}\nLongitude: ${pos.coords.longitude.toFixed(6)}\nAccuracy: ±${pos.coords.accuracy.toFixed(1)} meters`);
+            },
+            (err) => {
+                alert("GPS Error: " + err.message);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+
+    // --- Geofence Venue Handlers ---
+    document.getElementById('addVenueForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const res = await fetch('/api/management/add_venue', { method: 'POST', body: fd });
+        const d = await res.json();
+        alert(d.message);
+        if (d.status === 'success') window.location.reload();
+    });
+
+    async function deleteVenue(venueId, venueName) {
+        if (!confirm(`Delete classroom geofence for '${venueName}'?`)) return;
+        const res = await fetch(`/api/management/delete_venue/${venueId}`, { method: 'POST' });
+        const d = await res.json();
+        alert(d.message);
+        window.location.reload();
+    }
+
+    // --- Department / Branch Handlers ---
+    document.getElementById('addDeptForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const res = await fetch('/api/management/add_department', { method: 'POST', body: fd });
+        const d = await res.json();
+        alert(d.message);
+        if (d.status === 'success') window.location.reload();
+    });
+
+    async function deleteDepartment(deptId, deptName) {
+        if (!confirm(`Delete academic branch '${deptName}'?`)) return;
+        const res = await fetch(`/api/management/delete_department/${deptId}`, { method: 'POST' });
+        const d = await res.json();
+        alert(d.message);
+        window.location.reload();
+    }
+
+    // --- SMS Settings Handler ---
+    document.getElementById('smsSettingsForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const res = await fetch('/api/management/save_sms_settings', { method: 'POST', body: fd });
+        const d = await res.json();
+        alert(d.message);
+    });
+
+    // --- Geofence Approval Handlers ---
+    async function approveGeofence(reqId, subject, venue) {
+        if (!confirm(`Approve classroom relocation for ${subject} to ${venue}?`)) return;
+        const res = await fetch(`/api/management/approve_geofence/${reqId}`, { method: 'POST' });
+        const d = await res.json();
+        alert(d.message);
+        window.location.reload();
+    }
+
+    async function rejectGeofence(reqId, subject) {
+        if (!confirm(`Reject classroom relocation for ${subject}?`)) return;
+        const res = await fetch(`/api/management/reject_geofence/${reqId}`, { method: 'POST' });
+        const d = await res.json();
+        alert(d.message);
+        window.location.reload();
+    }
+
+    // --- Edit User & Password Reset Handlers ---
+    function openEditModal(id, name, phone, parentPhone, email, dept, year, className, teacherId) {
+        document.getElementById('editUserId').value = id;
+        document.getElementById('editUserName').value = name;
+        document.getElementById('editUserPhone').value = phone;
+        document.getElementById('editParentPhone').value = parentPhone;
+        document.getElementById('editUserEmail').value = email;
+        document.getElementById('editUserYear').value = year || '3rd Year';
+        document.getElementById('editUserClass').value = className || 'CS-A';
+        document.getElementById('editAssignedTeacher').value = teacherId || '';
+        document.getElementById('editUserNameLabel').textContent = `Editing profile & allocation for ${name}`;
+        toggleModal('editUserModal');
+    }
+
+    function openResetModal(id, name) {
+        document.getElementById('resetUserId').value = id;
+        document.getElementById('resetUserNameLabel').textContent = `Resetting password for ${name}`;
+        toggleModal('resetPwdModal');
+    }
+
+    document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const res = await fetch('/api/management/update_user', { method: 'POST', body: fd });
+        const d = await res.json();
+        alert(d.message);
+        if (d.status === 'success') window.location.reload();
+    });
+
+    document.getElementById('resetPwdForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const res = await fetch('/api/management/reset_password', { method: 'POST', body: fd });
+        const d = await res.json();
+        alert(d.message);
+        if (d.status === 'success') {
+            toggleModal('resetPwdModal');
+            if (d.whatsapp_url) {
+                if (confirm("Would you like to send the new password to the user on WhatsApp?")) {
+                    window.open(d.whatsapp_url, '_blank');
+                }
+            }
+        }
+    });
+
+    document.getElementById('newUserForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('regSubmitBtn');
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Creating Account...`;
+
+        const fd = new FormData(e.target);
+        try {
+            const res = await fetch('/api/management/create_user', { method: 'POST', body: fd });
+            const d = await res.json();
+
+            if (d.status === 'success' && d.credentials) {
+                toggleModal('newUserModal');
+                document.getElementById('sucName').textContent = d.credentials.name;
+                document.getElementById('sucRegNo').textContent = d.credentials.reg_no;
+                document.getElementById('sucPassword').textContent = d.credentials.password;
+                document.getElementById('sucPhone').textContent = d.credentials.phone;
+
+                document.getElementById('sucStudentWa').href = d.credentials.student_whatsapp_url;
+                document.getElementById('sucStudentSms').href = d.credentials.student_sms_url;
+                document.getElementById('sucParentWa').href = d.credentials.parent_whatsapp_url;
+
+                toggleModal('regSuccessModal');
+            } else {
+                alert(d.message || "Failed to create user.");
+            }
+        } catch (err) {
+            alert("Error creating user: " + err.message);
+        }
+        btn.disabled = false;
+        btn.innerHTML = `Create & Send Credentials`;
+    });
+
+    document.getElementById('importDataForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('importSubmitBtn');
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Restoring...`;
+        const fd = new FormData(e.target);
+        const res = await fetch('/api/management/import_data', { method: 'POST', body: fd });
+        const d = await res.json();
+        alert(d.message);
+        btn.disabled = false;
+        btn.innerHTML = `Upload & Restore`;
+        if (d.status === 'success') {
+            window.location.reload();
+        }
+    });
+
+
+
+    // --- Sub-Tab Switching for Attendance Intelligence ---
+    let currentMonthlyShortageList = [];
+    let currentConsecutiveList = [];
+    let currentDailyAbsenteesList = [];
+    let currentBatchCategory = 'absentees';
+
+    function switchAttendanceSubTab(subTabName) {
+        const subTabs = ['dailyRoster', 'monthlyShortage', 'consecutiveAbsent'];
+        subTabs.forEach(st => {
+            const el = document.getElementById('subView_' + st);
+            if (el) el.classList.add('hidden');
+            const btn = document.getElementById('subTabBtn_' + st);
+            if (btn) {
+                btn.className = "px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-slate-300";
+            }
+        });
+
+        const targetEl = document.getElementById('subView_' + subTabName);
+        if (targetEl) targetEl.classList.remove('hidden');
+
+        const activeBtn = document.getElementById('subTabBtn_' + subTabName);
+        if (activeBtn) {
+            if (subTabName === 'dailyRoster') {
+                activeBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-emerald-600 text-white shadow-md";
+            } else if (subTabName === 'monthlyShortage') {
+                activeBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-amber-600 text-white shadow-md";
+                fetchMonthlyShortage();
+            } else if (subTabName === 'consecutiveAbsent') {
+                activeBtn.className = "px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-rose-600 text-white shadow-md";
+                fetchConsecutiveAbsentees();
+            }
+        }
+    }
+
+    // --- Monthly Attendance Shortage (< 75%) Dynamic Fetch ---
+    async function fetchMonthlyShortage() {
+        const month = document.getElementById('shortageMonth')?.value || '';
+        const dept = document.getElementById('shortageDept')?.value || 'ALL';
+        const year = document.getElementById('shortageYear')?.value || 'ALL';
+        const cls = document.getElementById('shortageClass')?.value || 'ALL';
+
+        const tbody = document.getElementById('monthlyShortageTbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-400"><i class="fa-solid fa-spinner animate-spin text-purple-400"></i> Calculating monthly attendance rates...</td></tr>';
+
+        try {
+            const params = new URLSearchParams({ month, department: dept, year, class_name: cls });
+            const res = await fetch('/api/management/monthly_shortage_data?' + params.toString());
+            const data = await res.json();
+            if (data.status === 'success') {
+                const countBadge = document.getElementById('monthlyShortageCountBadge');
+                if (countBadge) countBadge.textContent = data.shortage_count + ' Students';
+                const subBadge = document.getElementById('badgeMonthlyShortage');
+                if (subBadge) subBadge.textContent = data.shortage_count;
+                const kpiBadge = document.getElementById('kpiMonthlyShortageCount');
+                if (kpiBadge) kpiBadge.textContent = data.shortage_count;
+
+                currentMonthlyShortageList = data.shortage_students || [];
+
+                if (data.shortage_students.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">🎉 Great news! All students have 75% or higher attendance for this month.</td></tr>';
+                } else {
+                    tbody.innerHTML = data.shortage_students.map(s => `
+                        <tr class="hover:bg-slate-900/60 transition">
+                            <td class="py-3 px-3">
+                                <div class="flex items-center gap-2.5">
+                                    ${s.face_photo ? `<img src="${s.face_photo}" class="w-9 h-9 rounded-full object-cover border border-amber-500/40 shrink-0" alt="Face">` : `
+                                    <div class="w-9 h-9 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs font-bold shrink-0 border border-slate-700">
+                                        ${(s.name || 'S').slice(0, 2).toUpperCase()}
+                                    </div>`}
+                                    <div>
+                                        <div class="font-bold text-white">${s.name}</div>
+                                        <div class="text-[10px] text-amber-400 font-mono">${s.reg_no || s.username || ''}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3 px-3">
+                                <div class="text-slate-200 font-semibold">${s.department || ''}</div>
+                                <div class="text-[10px] text-indigo-300">${s.year || ''} &bull; Sec ${s.class_name || ''}</div>
+                            </td>
+                            <td class="py-3 px-3 font-mono">
+                                <span class="text-rose-400 font-bold">${s.attended_days}</span> / <span class="text-slate-400">${s.total_working_days} days</span>
+                            </td>
+                            <td class="py-3 px-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 font-black font-mono text-xs">
+                                        ${s.attendance_pct}% &lt; 75%
+                                    </span>
+                                    <div class="w-20 bg-slate-800 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-rose-500 h-full rounded-full" style="width: ${s.attendance_pct}%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3 px-3 text-right">
+                                <div class="flex flex-wrap items-center justify-end gap-1.5">
+                                    ${s.parent_whatsapp_url ? `
+                                    <a href="${s.parent_whatsapp_url}" target="_blank" class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="WhatsApp Parent">
+                                        <i class="fa-brands fa-whatsapp"></i> WA Parent
+                                    </a>` : ''}
+                                    ${s.parent_sms_url ? `
+                                    <a href="${s.parent_sms_url}" class="px-2.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="SMS Parent">
+                                        <i class="fa-solid fa-comment"></i> SMS Parent
+                                    </a>` : ''}
+                                    ${s.student_whatsapp_url ? `
+                                    <a href="${s.student_whatsapp_url}" target="_blank" class="px-2.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="WhatsApp Student">
+                                        <i class="fa-brands fa-whatsapp"></i> WA Student
+                                    </a>` : ''}
+                                    ${s.student_sms_url ? `
+                                    <a href="${s.student_sms_url}" class="px-2.5 py-1.5 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="SMS Student">
+                                        <i class="fa-solid fa-comment"></i> SMS Student
+                                    </a>` : ''}
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            }
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-rose-400">Failed to load monthly shortage data: ${err.message}</td></tr>`;
+        }
+    }
+
+    // --- 4-Day Consecutive Absentees Dynamic Fetch ---
+    async function fetchConsecutiveAbsentees() {
+        const tbody = document.getElementById('consecutiveAbsenteesTbody');
+        if (!tbody) return;
+
+        try {
+            const res = await fetch('/api/management/consecutive_absentees_data?consecutive_days=4');
+            const data = await res.json();
+            if (data.status === 'success') {
+                const countBadge = document.getElementById('consecutiveCountBadge');
+                if (countBadge) countBadge.textContent = data.consecutive_absent_count + ' Students';
+                const subBadge = document.getElementById('badgeConsecutiveAbsent');
+                if (subBadge) subBadge.textContent = data.consecutive_absent_count;
+                const kpiBadge = document.getElementById('kpiConsecutiveAbsentCount');
+                if (kpiBadge) kpiBadge.textContent = data.consecutive_absent_count;
+
+                currentConsecutiveList = data.consecutive_absentees || [];
+
+                if (data.consecutive_absentees.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">🎉 No students have 4 or more consecutive absent days!</td></tr>';
+                } else {
+                    tbody.innerHTML = data.consecutive_absentees.map(s => `
+                        <tr class="hover:bg-slate-900/60 transition">
+                            <td class="py-3 px-3">
+                                <div class="flex items-center gap-2.5">
+                                    ${s.face_photo ? `<img src="${s.face_photo}" class="w-9 h-9 rounded-full object-cover border border-rose-500/40 shrink-0" alt="Face">` : `
+                                    <div class="w-9 h-9 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs font-bold shrink-0 border border-slate-700">
+                                        ${(s.name || 'S').slice(0, 2).toUpperCase()}
+                                    </div>`}
+                                    <div>
+                                        <div class="font-bold text-white">${s.name}</div>
+                                        <div class="text-[10px] text-rose-400 font-mono">${s.reg_no || s.username || ''}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3 px-3">
+                                <div class="text-slate-200 font-semibold">${s.department || ''}</div>
+                                <div class="text-[10px] text-indigo-300">${s.year || ''} &bull; Sec ${s.class_name || ''}</div>
+                            </td>
+                            <td class="py-3 px-3">
+                                <span class="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 font-black text-xs inline-flex items-center gap-1">
+                                    <i class="fa-solid fa-triangle-exclamation"></i> ${s.consecutive_absent_days} Days Continuous
+                                </span>
+                            </td>
+                            <td class="py-3 px-3 font-mono text-[11px] text-amber-300 font-semibold">
+                                ${s.absent_dates_str}
+                            </td>
+                            <td class="py-3 px-3 text-right">
+                                <div class="flex flex-wrap items-center justify-end gap-1.5">
+                                    ${s.parent_whatsapp_url ? `
+                                    <a href="${s.parent_whatsapp_url}" target="_blank" class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="WhatsApp Parent">
+                                        <i class="fa-brands fa-whatsapp"></i> WA Parent
+                                    </a>` : ''}
+                                    ${s.parent_sms_url ? `
+                                    <a href="${s.parent_sms_url}" class="px-2.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="SMS Parent">
+                                        <i class="fa-solid fa-comment"></i> SMS Parent
+                                    </a>` : ''}
+                                    ${s.student_whatsapp_url ? `
+                                    <a href="${s.student_whatsapp_url}" target="_blank" class="px-2.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="WhatsApp Student">
+                                        <i class="fa-brands fa-whatsapp"></i> WA Student
+                                    </a>` : ''}
+                                    ${s.student_sms_url ? `
+                                    <a href="${s.student_sms_url}" class="px-2.5 py-1.5 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm" title="SMS Student">
+                                        <i class="fa-solid fa-comment"></i> SMS Student
+                                    </a>` : ''}
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            }
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-rose-400">Failed to load 4-day absentees: ${err.message}</td></tr>`;
+        }
+    }
+
+    // --- Batch Direct Dispatch Modal Helpers ---
+    function openBatchDispatchModal(category) {
+        currentBatchCategory = category;
+        const titleEl = document.getElementById('batchModalTitle');
+        const subEl = document.getElementById('batchModalSubtitle');
+        const alertBox = document.getElementById('batchStatusAlert');
+        if (alertBox) alertBox.classList.add('hidden');
+
+        if (category === 'shortage') {
+            titleEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Dispatch &lt;75% Attendance Shortage Alerts`;
+            subEl.textContent = `Batch messaging queue for students with monthly attendance below 75%.`;
+        } else if (category === 'consecutive') {
+            titleEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-400"></i> Dispatch 4-Day Continuous Absence Warnings`;
+            subEl.textContent = `Batch messaging queue for students absent for 4 or more consecutive days.`;
+        } else {
+            titleEl.innerHTML = `<i class="fa-solid fa-paper-plane text-indigo-400"></i> Dispatch Daily Absence Alerts`;
+            subEl.textContent = `Batch messaging queue for unverified absentees on selected date.`;
+        }
+
+        updateBatchQueueList();
+        toggleModal('batchDispatchModal');
+    }
+
+    function updateBatchQueueList() {
+        const queueContainer = document.getElementById('batchQueueList');
+        if (!queueContainer) return;
+
+        let target = 'parents';
+        const radios = document.getElementsByName('batchTarget');
+        for (let r of radios) { if (r.checked) { target = r.value; break; } }
+
+        let list = [];
+        if (currentBatchCategory === 'shortage') {
+            list = currentMonthlyShortageList;
+        } else if (currentBatchCategory === 'consecutive') {
+            list = currentConsecutiveList;
+        } else {
+            list = currentDailyAbsenteesList;
+        }
+
+        if (list.length === 0) {
+            queueContainer.innerHTML = '<div class="p-6 text-center text-slate-500 text-xs">No students currently in this queue.</div>';
+            return;
+        }
+
+        queueContainer.innerHTML = list.map((item, idx) => {
+            const hasParent = (target === 'parents' || target === 'both');
+            const hasStudent = (target === 'students' || target === 'both');
+
+            return `
+                <div class="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-6 h-6 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center text-[10px] font-bold shrink-0 font-mono">${idx + 1}</span>
+                        <div>
+                            <div class="font-bold text-white">${item.name} <span class="text-indigo-400 font-mono text-[10px]">(${item.reg_no || item.username || ''})</span></div>
+                            <div class="text-[10px] text-slate-400">${item.department || ''} &bull; ${item.class_name || ''}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        ${hasParent && item.parent_whatsapp_url ? `
+                        <a href="${item.parent_whatsapp_url}" target="_blank" class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold transition flex items-center gap-1 shadow-sm">
+                            <i class="fa-brands fa-whatsapp"></i> WA Parent
+                        </a>` : ''}
+                        ${hasStudent && item.student_whatsapp_url ? `
+                        <a href="${item.student_whatsapp_url}" target="_blank" class="px-2 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-bold transition flex items-center gap-1 shadow-sm">
+                            <i class="fa-brands fa-whatsapp"></i> WA Student
+                        </a>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function dispatchBatchServerAlerts() {
+        const btn = document.getElementById('batchServerDispatchBtn');
+        const alertBox = document.getElementById('batchStatusAlert');
+        let target = 'parents';
+        const radios = document.getElementsByName('batchTarget');
+        for (let r of radios) { if (r.checked) { target = r.value; break; } }
+
+        let list = [];
+        if (currentBatchCategory === 'shortage') list = currentMonthlyShortageList;
+        else if (currentBatchCategory === 'consecutive') list = currentConsecutiveList;
+        else list = currentDailyAbsenteesList;
+
+        if (list.length === 0) {
+            alert('Queue is empty!');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Dispatching ${list.length} notifications...`;
+
+        let successCount = 0;
+        for (let item of list) {
+            // Parent message
+            if (target === 'parents' || target === 'both') {
+                if (item.parent_phone) {
+                    const fd = new FormData();
+                    fd.append('recipient_phone', item.parent_phone);
+                    fd.append('recipient_name', 'Parent of ' + item.name);
+                    fd.append('recipient_role', 'parent');
+                    fd.append('message_type', currentBatchCategory.toUpperCase() + '_ALERT');
+                    fd.append('message_body', item.parent_msg || 'Attendance notification');
+                    try {
+                        await fetch('/api/management/send_direct_alert', { method: 'POST', body: fd });
+                        successCount++;
+                    } catch (e) {}
+                }
+            }
+            // Student message
+            if (target === 'students' || target === 'both') {
+                if (item.phone) {
+                    const fd = new FormData();
+                    fd.append('recipient_phone', item.phone);
+                    fd.append('recipient_name', item.name);
+                    fd.append('recipient_role', 'student');
+                    fd.append('message_type', currentBatchCategory.toUpperCase() + '_ALERT');
+                    fd.append('message_body', item.student_msg || 'Attendance notification');
+                    try {
+                        await fetch('/api/management/send_direct_alert', { method: 'POST', body: fd });
+                        successCount++;
+                    } catch (e) {}
+                }
+            }
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-check"></i> Dispatched!`;
+
+        alertBox.className = "p-3 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 block";
+        alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> Successfully dispatched and recorded ${successCount} notification log entries! Click any WhatsApp link to open directly.`;
+    }
+
+
+</script>
+{% endblock %}
